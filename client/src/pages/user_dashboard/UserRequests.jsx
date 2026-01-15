@@ -53,28 +53,19 @@ const UserRequests = () => {
     setSubmitting(true); setErr('');
     try {
       const count = Number(sellBarrels.barrelCount);
-
-
       
-      // Validation 1: Check if user has company barrels
       if (myCompanyBarrels === 0) {
         setErr('You do not have any company barrels assigned. Please submit a barrel request first.');
-        setTab('BARREL'); // Switch to barrel request tab
+        setTab('BARREL');
         return;
       }
       
-      // Validation 2: Basic field validation
-
       if (!sellBarrels.name || !sellBarrels.phone || !count) {
         setErr('Please enter name, phone and barrel count');
       } else if (count < 1) {
         setErr('Barrel count must be at least 1');
       } else if (count > myCompanyBarrels) {
-
-        setErr(`Requested barrels (${count}) exceed your company barrels (${myCompanyBarrels}).`);
-
         setErr(`Requested barrels (${count}) exceed your company barrels (${myCompanyBarrels}). You only have ${myCompanyBarrels} barrel(s) available.`);
-
       } else {
         const ok = await confirm('Confirm submission', 'Are you sure? Please wait for manager verification.');
         if (!ok) { setSubmitting(false); return; }
@@ -122,7 +113,6 @@ const UserRequests = () => {
     }
   }, [tab]);
 
-  // Prefill Sell Barrels form with user info if available
   useEffect(() => {
     const shouldBlockPhone = (u) => {
       const prov = String(
@@ -131,7 +121,6 @@ const UserRequests = () => {
       return prov.includes('google');
     };
 
-    // 1) Prefer AuthContext
     if (authUser) {
       const name = authUser?.name || authUser?.fullName || authUser?.profile?.name || '';
       const phone = authUser?.phoneNumber || authUser?.phone || authUser?.mobile || authUser?.profile?.phone || '';
@@ -141,20 +130,16 @@ const UserRequests = () => {
         name: name || prev.name,
         phone: isGoogle ? '' : (phone || prev.phone)
       }));
-      // If not Google and phone still missing, try fetching fresh profile
+      
       if (!isGoogle && !(phone || '').trim() && typeof validateToken === 'function') {
         validateToken().then((u) => {
           const p = u?.phoneNumber || u?.phone || u?.mobile || u?.profile?.phone || '';
           if (p) setSellBarrels(prev => ({ ...prev, phone: p }));
-
         }).catch(() => { });
-
-        }).catch(()=>{});
-
       }
       return;
     }
-    // 2) Fallback to localStorage
+    
     try {
       let u = null;
       const uStr = localStorage.getItem('user');
@@ -165,7 +150,7 @@ const UserRequests = () => {
         if (profileStr) {
           try {
             const parsed = JSON.parse(profileStr);
-            u = parsed?.user || parsed; // support { user, token }
+            u = parsed?.user || parsed;
           } catch { u = null; }
         }
       }
@@ -179,17 +164,12 @@ const UserRequests = () => {
           phone: isGoogle ? '' : (phone || prev.phone)
         }));
       }
-
     } catch { }
-
-    } catch {}
-
   }, [authUser]);
 
   const submitBarrel = async () => {
     setSubmitting(true); setErr('');
     try {
-
       const qty = Number(barrel.quantity) || 1;
       if (qty < 1 || qty > 50) {
         setErr('Quantity must be between 1 and 50 barrels');
@@ -197,9 +177,6 @@ const UserRequests = () => {
         return;
       }
       await createRequest({ type: 'BARREL', quantity: qty, notes: barrel.notes });
-
-      await createRequest({ type: 'BARREL', quantity: Number(barrel.quantity) || 1, notes: barrel.notes });
-
       setBarrel(initialBarrel);
       await load();
     } catch (e) { setErr('Failed to submit request'); }
@@ -227,23 +204,13 @@ const UserRequests = () => {
       </div>
 
       {err && <div className="alert error">{err}</div>}
-
       {info && <div className="alert" style={{ color: '#0a7' }}>{info}</div>}
-
-      {tab === 'BARREL' ? (
-        <div className="dash-card" style={{ display: 'grid', gap: 12 }}>
-          <label>
-            Quantity (Max: 50 barrels)
-            <input type="number" min={1} max={50} step={1} value={barrel.quantity} onChange={e => setBarrel({ ...barrel, quantity: e.target.value })} />
-
-      {info && <div className="alert" style={{ color:'#0a7' }}>{info}</div>}
 
       {tab === 'BARREL' ? (
         <div className="dash-card" style={{ maxWidth: 520, display: 'grid', gap: 12 }}>
           <label>
-            Quantity
-            <input type="number" min={1} step={1} value={barrel.quantity} onChange={e => setBarrel({ ...barrel, quantity: e.target.value })} />
-
+            Quantity (Max: 50 barrels)
+            <input type="number" min={1} max={50} step={1} value={barrel.quantity} onChange={e => setBarrel({ ...barrel, quantity: e.target.value })} />
           </label>
           <label>
             Notes (optional)
@@ -252,10 +219,6 @@ const UserRequests = () => {
           <button className="btn" onClick={submitBarrel} disabled={submitting}>{submitting ? 'Submitting...' : 'Submit Request'}</button>
         </div>
       ) : tab === 'SELL_BARRELS' ? (
-
-        <div className="dash-card" style={{ display: 'grid', gap: 12 }}>
-          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' }}>
-
         <div className="dash-card" style={{ maxWidth: 640, display: 'grid', gap: 12 }}>
           {myCompanyBarrels === 0 && (
             <div className="alert error" style={{ backgroundColor: '#fee', border: '1px solid #fcc', color: '#c33', padding: '12px', borderRadius: '6px' }}>
@@ -270,8 +233,7 @@ const UserRequests = () => {
               </button>
             </div>
           )}
-          <div style={{ display:'grid', gap: 12, gridTemplateColumns:'1fr 1fr' }}>
-
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr' }}>
             <label>
               Name
               <input type="text" value={sellBarrels.name} onChange={e => setSellBarrels({ ...sellBarrels, name: e.target.value })} />
@@ -287,17 +249,7 @@ const UserRequests = () => {
               onChange={e => setSellBarrels({ ...sellBarrels, barrelCount: e.target.value })}
             />
           </label>
-
-          <div style={{ display: 'flex', gap: 12, color: '#2563eb', fontSize: 13 }}>
-            <span>Company Barrels: {myCompanyBarrels}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button type="button" onClick={getLocation}>Use my location</button>
-            <span style={{ color: '#555' }}>{geoStatus}</span>
-            {geo.lat && geo.lng && (
-              <span style={{ fontSize: 12, color: '#2563eb' }}>Lat: {geo.lat.toFixed(5)}, Lng: {geo.lng.toFixed(5)}</span>
-
-          <div style={{ display:'flex', gap:12, color: myCompanyBarrels > 0 ? '#2563eb' : '#dc2626', fontSize:13, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, color: myCompanyBarrels > 0 ? '#2563eb' : '#dc2626', fontSize: 13, alignItems: 'center' }}>
             <span style={{ fontWeight: myCompanyBarrels === 0 ? 'bold' : 'normal' }}>
               {myCompanyBarrels === 0 ? '⚠️ ' : ''}Company Barrels: {myCompanyBarrels}
             </span>
@@ -305,31 +257,23 @@ const UserRequests = () => {
               <span style={{ fontSize: 11, color: '#666' }}>(Request barrels first)</span>
             )}
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button type="button" onClick={getLocation}>Use my location</button>
-            <span style={{ color:'#555' }}>{geoStatus}</span>
+            <span style={{ color: '#555' }}>{geoStatus}</span>
             {geo.lat && geo.lng && (
-              <span style={{ fontSize:12, color:'#2563eb' }}>Lat: {geo.lat.toFixed(5)}, Lng: {geo.lng.toFixed(5)}</span>
-
+              <span style={{ fontSize: 12, color: '#2563eb' }}>Lat: {geo.lat.toFixed(5)}, Lng: {geo.lng.toFixed(5)}</span>
             )}
           </div>
           <label>
             Notes (optional)
             <textarea value={sellBarrels.notes} onChange={e => setSellBarrels({ ...sellBarrels, notes: e.target.value })} />
           </label>
-
-          <button className="btn" onClick={submitSellBarrels} disabled={submitting}>{submitting ? 'Submitting...' : 'Submit Request'}</button>
-        </div>
-      ) : (
-        <div className="dash-card" style={{ display: 'grid', gap: 12 }}>
-
           <button className="btn" onClick={submitSellBarrels} disabled={submitting || myCompanyBarrels === 0}>
             {submitting ? 'Submitting...' : myCompanyBarrels === 0 ? 'No Barrels Available' : 'Submit Request'}
           </button>
         </div>
       ) : (
         <div className="dash-card" style={{ maxWidth: 640, display: 'grid', gap: 12 }}>
-
           <label>
             Subject
             <input type="text" value={complaint.subject} onChange={e => setComplaint({ ...complaint, subject: e.target.value })} />
@@ -353,19 +297,11 @@ const UserRequests = () => {
 
       <div className="dash-card" style={{ marginTop: 16 }}>
         <h3 style={{ marginTop: 0 }}>My Requests</h3>
-
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
           <span style={{ background: '#eef6ff', color: '#2563eb', padding: '6px 10px', borderRadius: 6 }}>
             Total Sell Barrels: {items.filter(r => r.type === 'SELL_BARRELS').reduce((sum, r) => sum + (Number(r.barrelCount) || 0), 0)}
           </span>
           <span style={{ background: '#f1f5f9', color: '#334155', padding: '6px 10px', borderRadius: 6 }}>
-
-        <div style={{ display:'flex', gap:16, flexWrap:'wrap', marginBottom:8 }}>
-          <span style={{ background:'#eef6ff', color:'#2563eb', padding:'6px 10px', borderRadius:6 }}>
-            Total Sell Barrels: {items.filter(r => r.type === 'SELL_BARRELS').reduce((sum, r) => sum + (Number(r.barrelCount) || 0), 0)}
-          </span>
-          <span style={{ background:'#f1f5f9', color:'#334155', padding:'6px 10px', borderRadius:6 }}>
-
             Pending Sell Barrels: {items.filter(r => r.type === 'SELL_BARRELS' && String(r.status || '').toLowerCase() === 'pending').reduce((sum, r) => sum + (Number(r.barrelCount) || 0), 0)}
           </span>
         </div>
@@ -381,10 +317,6 @@ const UserRequests = () => {
                   <th>Created</th>
                   <th>Type</th>
                   <th>Barrels</th>
-
-
-                  <th>Company Barrel</th>
-
                   <th>Subject/Notes</th>
                   <th>Status</th>
                 </tr>
@@ -394,7 +326,6 @@ const UserRequests = () => {
                   <tr key={r.id || r._id}>
                     <td>{new Date(r.createdAt || Date.now()).toLocaleString('en-IN')}</td>
                     <td>{r.type === 'SELL_BARRELS' ? 'SELL BARRELS' : r.type}</td>
-
                     <td>
                       {r.type === 'SELL_BARRELS'
                         ? (r.barrelCount ?? r.count ?? '-')
@@ -404,12 +335,6 @@ const UserRequests = () => {
                     </td>
                     <td>{r.type === 'BARREL' ? (r.notes || '-') : (r.subject || r.notes || '-')}</td>
                     <td><span className={`badge status-${(r.status || 'pending').toLowerCase().replace(/\s+/g, '-')}`}>{r.status || 'pending'}</span></td>
-
-                    <td>{r.type === 'SELL_BARRELS' ? (r.barrelCount ?? r.count ?? '-') : '-'}</td>
-                    <td>{r.type === 'SELL_BARRELS' ? (r.companyBarrel || '-') : '-'}</td>
-                    <td>{r.type === 'BARREL' ? (r.notes || '-') : (r.subject || r.notes || '-')}</td>
-                    <td><span className={`badge status-${(r.status || 'Pending').toLowerCase().replace(/\s+/g,'-')}`}>{r.status || 'Pending'}</span></td>
-
                   </tr>
                 ))}
               </tbody>

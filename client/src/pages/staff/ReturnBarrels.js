@@ -1,292 +1,365 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import './ReturnBarrels.css';
 
 const ReturnBarrels = () => {
   const { user } = useAuth();
   const [scannedBarrels, setScannedBarrels] = useState([]);
-  const [isScanning, setIsScanning] = useState(false);
-  const [scannerInput, setScannerInput] = useState('');
+  const [scanInput, setScanInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const scannerRef = useRef(null);
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [returnHistory, setReturnHistory] = useState([]);
+  const [activeTab, setActiveTab] = useState('scan'); // 'scan' or 'history'
 
-  // Focus scanner input when component mounts
+  // Fetch return history on mount
   useEffect(() => {
-    if (scannerRef.current) {
-      scannerRef.current.focus();
-    }
+    fetchReturnHistory();
   }, []);
 
-  // Handle scanner input (simulating barcode scanner)
-  const handleScannerInput = (e) => {
-    const value = e.target.value;
-    setScannerInput(value);
-    
-    // Set scanning state when user starts typing
-    if (value.length > 0) {
-      setIsScanning(true);
-    } else {
-      setIsScanning(false);
-    }
-    
-    // Simulate scanner behavior - if input ends with Enter or is long enough, process it
-    if (value.includes('\n') || value.length > 8) {
-      const barrelId = value.replace('\n', '').trim();
-      if (barrelId) {
-        processScannedBarrel(barrelId);
-        setScannerInput('');
-        setIsScanning(false);
+  // Fetch return history
+  const fetchReturnHistory = async () => {
+    try {
+      const response = await fetch('/api/field-staff/return-requests', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.log('History endpoint not available or returned non-JSON response');
+        return;
       }
-    }
-  };
-
-  // Handle Enter key press for manual input
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && scannerInput.trim()) {
-      processScannedBarrel(scannerInput.trim());
-      setScannerInput('');
-      setIsScanning(false);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setReturnHistory(data.requests || []);
+      } else {
+        console.log('Failed to fetch return history:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching return history:', error);
+      // Don't show error to user, just log it
     }
   };
 
   // Validate barrel ID format: BHFP + 1-3 digits
   const validateBarrelId = (barrelId) => {
-    const regex = /^BHFP\d{1,3}$/;
-    return regex.test(barrelId);
+    const regex = /^BHFP\d{1,3}$/i;
+    return regex.test(barrelId.toUpperCase());
   };
 
-  // Process scanned barrel ID
-  const processScannedBarrel = async (barrelId) => {
-    // Validate format
+  // Handle scan input
+  const handleScanInput = (e) => {
+    const value = e.target.value.trim().toUpperCase();
+    setScanInput(value);
+
+    // Auto-process on Enter
+    if (e.key === 'Enter' && value) {
+      processBarrelScan(value);
+      setScanInput('');
+    }
+  };
+
+  // Process scanned barrel
+  const processBarrelScan = (barrelId) => {
     if (!validateBarrelId(barrelId)) {
-      setMessage('❌ Invalid format! Use: BHFP + 1-3 digits (e.g., BHFP1, BHFP12, BHFP123)');
-      setTimeout(() => setMessage(''), 5000);
+      showMessage('error', `Invalid barrel ID format: ${barrelId}. Use BHFP + 1-3 digits`);
       return;
     }
 
-    if (scannedBarrels.find(barrel => barrel.barrelId === barrelId)) {
-      setMessage('⚠️ Barrel already scanned');
-      setTimeout(() => setMessage(''), 3000);
+    if (scannedBarrels.includes(barrelId)) {
+      showMessage('warning', `Barrel ${barrelId} already scanned`);
       return;
     }
 
-    setLoading(true);
-    try {
-      // Add barrel to scanned list
-      const newBarrel = {
-        barrelId,
-        scannedAt: new Date().toISOString(),
-        status: 'scanned',
-        scannedBy: user?.name || 'Staff'
-      };
-      
-      setScannedBarrels(prev => [...prev, newBarrel]);
-      setMessage(`✅ Barrel ${barrelId} scanned successfully`);
-      setTimeout(() => setMessage(''), 3000);
-    } catch (error) {
-      setMessage('❌ Error scanning barrel');
-      setTimeout(() => setMessage(''), 3000);
-    } finally {
-      setLoading(false);
+    setScannedBarrels(prev => [...prev, barrelId]);
+    showMessage('success', `✓ Barrel ${barrelId} added successfully`);
+  };
+
+  // Manual add barrel
+  const handleManualAdd = () => {
+    if (scanInput.trim()) {
+      processBarrelScan(scanInput.trim().toUpperCase());
+      setScanInput('');
     }
   };
 
-  // Complete return process
-  const completeReturn = async () => {
+  // Remove barrel from list
+  const removeBarrel = (barrelId) => {
+    setScannedBarrels(prev => prev.filter(id => id !== barrelId));
+    showMessage('info', `Barrel ${barrelId} removed`);
+  };
+
+  // Show message helper
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+  };
+
+  // Submit return request
+  const submitReturnRequest = async () => {
     if (scannedBarrels.length === 0) {
-      setMessage('No barrels to return');
-      setTimeout(() => setMessage(''), 3000);
+      showMessage('error', 'Please scan at least one barrel');
       return;
     }
 
     setLoading(true);
     try {
-      const returnData = {
-        barrels: scannedBarrels,
-        returnedBy: user?._id,
-        returnedAt: new Date().toISOString(),
-        status: 'returned'
-      };
-
-      const response = await fetch('/api/barrels/return', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(returnData)
-      });
-
-      if (response.ok) {
-        setMessage(`${scannedBarrels.length} barrels returned successfully! Manager will be notified.`);
-        setScannedBarrels([]);
-        
-        // Notify manager
-        await notifyManager();
-      } else {
-        throw new Error('Failed to return barrels');
-      }
-    } catch (error) {
-      setMessage('Error completing return');
-    } finally {
-      setLoading(false);
-      setTimeout(() => setMessage(''), 5000);
-    }
-  };
-
-  // Notify manager about returned barrels
-  const notifyManager = async () => {
-    try {
-      await fetch('/api/notifications/barrel-return', {
+      const response = await fetch('/api/field-staff/return-barrels', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          barrels: scannedBarrels,
-          returnedBy: user?.name,
-          message: `${scannedBarrels.length} barrels have been returned and need reassignment`
+          barrelIds: scannedBarrels,
+          reason: 'completed_route',
+          notes: '',
+          returnedBy: user?._id,
+          returnedByName: user?.name
         })
       });
-    } catch (error) {
-      console.error('Failed to notify manager:', error);
-    }
-  };
 
-  // Remove barrel from scanned list
-  const removeBarrel = (barrelId) => {
-    setScannedBarrels(prev => prev.filter(barrel => barrel.barrelId !== barrelId));
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned an invalid response. Please check your permissions.');
+      }
+
+      const data = await response.json();
+
+      if (response.ok) {
+        showMessage('success', `Successfully submitted ${scannedBarrels.length} barrels for return!`);
+        setScannedBarrels([]);
+        fetchReturnHistory(); // Refresh history
+      } else {
+        throw new Error(data.message || 'Failed to submit return request');
+      }
+    } catch (error) {
+      showMessage('error', error.message || 'Failed to submit return request');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="return-barrels-container">
-      <div className="page-header">
-        <h1>Return Barrels</h1>
-        <p>Scan barrel IDs to mark them as returned</p>
+      {/* Breadcrumb */}
+      <div className="breadcrumb">
+        <span>Home</span>
+        <i className="fas fa-chevron-right"></i>
+        <span>Dashboard</span>
       </div>
 
-      {message && (
-        <div className={`message ${message.includes('Error') ? 'error' : 'success'}`}>
-          {message}
-        </div>
-      )}
-
-      <div className="scanner-section">
-        <div className="scanner-status-banner">
-          {isScanning ? (
-            <div className="status-indicator scanning">
-              <div className="pulse-dot"></div>
-              <span className="status-text">🔴 Scanning...</span>
-              <div className="scanning-animation">
-                <div className="scan-line"></div>
-              </div>
-            </div>
-          ) : (
-            <div className="status-indicator ready">
-              <div className="ready-icon">✓</div>
-              <span className="status-text">🟢 Ready to Scan</span>
-              <span className="status-subtext">Scan or type Barrel ID below</span>
-            </div>
-          )}
-        </div>
-        
-        <div className="scanner-input-container">
-          <label htmlFor="scanner">Barrel ID Input:</label>
-          <input
-            ref={scannerRef}
-            id="scanner"
-            type="text"
-            value={scannerInput}
-            onChange={handleScannerInput}
-            onKeyPress={handleKeyPress}
-            placeholder="Scan with barcode scanner or type manually and press Enter..."
-            className={`scanner-input ${isScanning ? 'active' : ''}`}
-            disabled={loading}
-            autoFocus
-          />
-          <button 
-            className="manual-add-btn"
-            onClick={() => {
-              if (scannerInput.trim()) {
-                processScannedBarrel(scannerInput.trim());
-                setScannerInput('');
-                setIsScanning(false);
-              }
-            }}
-            disabled={!scannerInput.trim() || loading}
-          >
-            Add Barrel
-          </button>
-        </div>
-      </div>
-
-      <div className="scanned-barrels-section">
-        <h3>Scanned Barrels ({scannedBarrels.length})</h3>
-        {scannedBarrels.length === 0 ? (
-          <div className="no-barrels">
-            <p>No barrels scanned yet</p>
-            <p>Use the scanner above to scan barrel IDs</p>
-          </div>
-        ) : (
-          <div className="barrels-list">
-            {scannedBarrels.map((barrel, index) => (
-              <div key={barrel.barrelId} className="barrel-item">
-                <div className="barrel-info">
-                  <span className="barrel-id">{barrel.barrelId}</span>
-                  <span className="scan-time">
-                    Scanned: {new Date(barrel.scannedAt).toLocaleTimeString()}
-                  </span>
-                </div>
-                <button 
-                  className="remove-btn"
-                  onClick={() => removeBarrel(barrel.barrelId)}
-                  disabled={loading}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="actions-section">
-        <button 
-          className="complete-return-btn"
-          onClick={completeReturn}
-          disabled={scannedBarrels.length === 0 || loading}
+      {/* Tabs */}
+      <div className="tabs">
+        <button
+          className={`tab ${activeTab === 'scan' ? 'active' : ''}`}
+          onClick={() => setActiveTab('scan')}
         >
-          {loading ? 'Processing...' : `Complete Return (${scannedBarrels.length} barrels)`}
+          <i className="fas fa-qrcode"></i>
+          Scan Barrels
+        </button>
+        <button
+          className={`tab ${activeTab === 'history' ? 'active' : ''}`}
+          onClick={() => setActiveTab('history')}
+        >
+          <i className="fas fa-history"></i>
+          Return History
         </button>
       </div>
 
-      <div className="instructions">
-        <h4>📋 Instructions:</h4>
-        <div className="format-example">
-          <strong>✅ Valid Barrel ID Format:</strong>
-          <div className="format-box">
-            <span className="format-label">BHFP</span> + <span className="format-label">1-3 digits</span>
-          </div>
-          <div className="examples">
-            <span className="valid-example">✅ BHFP1</span>
-            <span className="valid-example">✅ BHFP12</span>
-            <span className="valid-example">✅ BHFP123</span>
-          </div>
-          <div className="examples invalid">
-            <span className="invalid-example">❌ bhfp90 (lowercase)</span>
-            <span className="invalid-example">❌ BHFP1234 (4 digits)</span>
-            <span className="invalid-example">❌ abcd78 (wrong prefix)</span>
-          </div>
+      {/* Message Alert */}
+      {message.text && (
+        <div className={`alert alert-${message.type}`}>
+          <i className={`fas fa-${message.type === 'success' ? 'check-circle' : message.type === 'error' ? 'exclamation-circle' : 'info-circle'}`}></i>
+          <span>{message.text}</span>
         </div>
-        <ul>
-          <li>Scan or manually enter barrel IDs in the correct format</li>
-          <li>Each valid barrel will be added to the list</li>
-          <li>Click "Complete Return" when all barrels are scanned</li>
-          <li>Manager will be notified and can reassign barrels</li>
-        </ul>
-      </div>
+      )}
+
+      {/* Scan Tab */}
+      {activeTab === 'scan' && (
+        <>
+          {/* Animated Header */}
+          <div className="scan-header-animated">
+            <div className="scan-circle">
+              <div className="scan-pulse"></div>
+              <i className="fas fa-qrcode"></i>
+            </div>
+            <div className="scan-progress-bar">
+              <div 
+                className="scan-progress-fill" 
+                style={{ width: scannedBarrels.length > 0 ? `${Math.min((scannedBarrels.length / 10) * 100, 100)}%` : '0%' }}
+              ></div>
+            </div>
+          </div>
+
+          <div className="scan-card">
+            {/* Barrel ID Input */}
+            <div className="scan-input-section">
+              <label htmlFor="scanInput">
+                <i className="fas fa-barcode"></i> Barrel ID Input:
+              </label>
+              <div className="input-group">
+                <input
+                  id="scanInput"
+                  type="text"
+                  value={scanInput}
+                  onChange={(e) => setScanInput(e.target.value.toUpperCase())}
+                  onKeyPress={handleScanInput}
+                  className="scan-input"
+                  placeholder="BHFP2"
+                  autoFocus
+                />
+                <button
+                  className="btn-add-barrel"
+                  onClick={handleManualAdd}
+                  disabled={!scanInput.trim()}
+                >
+                  Add Barrel
+                </button>
+              </div>
+            </div>
+
+            {/* Scanned Barrels List */}
+            <div className="scanned-list">
+              <h3>Scanned Barrels ({scannedBarrels.length})</h3>
+              {scannedBarrels.length === 0 ? (
+                <div className="empty-state">
+                  <p>No barrels scanned yet</p>
+                </div>
+              ) : (
+                <div className="barrel-list">
+                  {scannedBarrels.map((barrelId, index) => (
+                    <div key={barrelId} className="barrel-item">
+                      <div className="barrel-info">
+                        <span className="barrel-id">{barrelId}</span>
+                        <span className="barrel-time">Scanned at {new Date().toLocaleTimeString()}</span>
+                      </div>
+                      <button
+                        className="remove-btn"
+                        onClick={() => removeBarrel(barrelId)}
+                        title="Remove barrel"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="scan-actions">
+              <button
+                className="btn-submit"
+                onClick={submitReturnRequest}
+                disabled={scannedBarrels.length === 0 || loading}
+              >
+                {loading ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i> Submitting...
+                  </>
+                ) : (
+                  <>
+                    Submit Return ({scannedBarrels.length} barrels)
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Format Instructions */}
+          <div className="format-info">
+            <div className="format-header">
+              <i className="fas fa-check-circle"></i>
+              <strong>Valid Barrel ID Format:</strong>
+            </div>
+            <div className="format-box">
+              <span className="format-label">BHFP</span>
+              <span className="format-plus">+</span>
+              <span className="format-label">1-3 digits</span>
+            </div>
+            <div className="format-examples">
+              <div className="example-group">
+                <span className="example-title">✅ Valid:</span>
+                <span className="valid-example">BHFP1</span>
+                <span className="valid-example">BHFP12</span>
+                <span className="valid-example">BHFP123</span>
+              </div>
+              <div className="example-group">
+                <span className="example-title">❌ Invalid:</span>
+                <span className="invalid-example">bhfp90 (lowercase)</span>
+                <span className="invalid-example">BHFP1234 (4 digits)</span>
+                <span className="invalid-example">abcd78 (wrong prefix)</span>
+              </div>
+            </div>
+            <ul className="format-instructions">
+              <li>Scan or manually enter barrel IDs in the correct format</li>
+              <li>Each valid barrel will be added to the list</li>
+              <li>Click "Complete Return" when all barrels are scanned</li>
+              <li>Manager will be notified and can reassign barrels</li>
+            </ul>
+          </div>
+        </>
+      )}
+
+      {/* History Tab */}
+      {activeTab === 'history' && (
+        <div className="history-section">
+          <h2>Return History</h2>
+          {returnHistory.length === 0 ? (
+            <div className="empty-history">
+              <i className="fas fa-inbox"></i>
+              <p>No return history yet</p>
+              <p className="hint">Your submitted returns will appear here</p>
+            </div>
+          ) : (
+            <div className="history-list">
+              {returnHistory.map((request) => (
+                <div key={request._id} className="history-card">
+                  <div className="history-header">
+                    <div className="history-date">
+                      <i className="fas fa-calendar"></i>
+                      {new Date(request.createdAt).toLocaleDateString()}
+                    </div>
+                    <span className={`status-badge status-${request.status}`}>
+                      {request.status}
+                    </span>
+                  </div>
+                  <div className="history-body">
+                    <div className="history-detail">
+                      <i className="fas fa-boxes"></i>
+                      <span><strong>{request.barrelIds?.length || 0}</strong> barrels returned</span>
+                    </div>
+                    <div className="history-detail">
+                      <i className="fas fa-tag"></i>
+                      <span>{request.reason?.replace(/_/g, ' ')}</span>
+                    </div>
+                    {request.notes && (
+                      <div className="history-detail">
+                        <i className="fas fa-sticky-note"></i>
+                        <span>{request.notes}</span>
+                      </div>
+                    )}
+                  </div>
+                  {request.barrelIds && request.barrelIds.length > 0 && (
+                    <div className="history-barrels">
+                      <strong>Barrel IDs:</strong>
+                      <div className="barrel-chips">
+                        {request.barrelIds.map(id => (
+                          <span key={id} className="barrel-chip">{id}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

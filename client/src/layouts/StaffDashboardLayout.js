@@ -9,6 +9,7 @@ const StaffDashboardLayout = ({ children }) => {
   const { logout, user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [notificationCount] = useState(1);
   const menuRef = useRef(null);
 
   // Close menu when clicking outside
@@ -39,7 +40,12 @@ const StaffDashboardLayout = ({ children }) => {
     { path: '/staff/leave', icon: 'fas fa-calendar-days', label: 'Apply Leave' },
     { path: '/staff/salary', icon: 'fas fa-wallet', label: 'Salary Details' },
     { path: '/staff/issues', icon: 'fas fa-exclamation-circle', label: 'Raise Issue' },
-    { path: '/staff/return-barrels', icon: 'fas fa-undo', label: 'Return Barrel' }
+    { path: '/staff/return-barrels', icon: 'fas fa-undo', label: 'Return Barrel' },
+    // Field staff specific items
+    ...(user?.role === 'field_staff' ? [
+      { path: '/field-staff/routes', icon: 'fas fa-route', label: 'My Routes' },
+      { path: '/field-staff/reports', icon: 'fas fa-file-alt', label: 'Daily Reports' }
+    ] : [])
   ];
 
   return (
@@ -67,19 +73,6 @@ const StaffDashboardLayout = ({ children }) => {
               <i className={`fas fa-chevron-${sidebarCollapsed ? 'right' : 'left'}`}></i>
             </button>
           </div>
-        </div>
-
-        {/* User Profile Section */}
-        <div className="user-profile-section">
-          <div className="user-avatar">
-            <i className="fas fa-user-circle"></i>
-          </div>
-          {!sidebarCollapsed && (
-            <div className="user-info">
-              <div className="user-name">{user?.name || 'Staff Member'}</div>
-              <div className="user-role">{user?.role?.replace('_', ' ') || 'Staff'}</div>
-            </div>
-          )}
         </div>
 
         {/* Navigation */}
@@ -135,7 +128,9 @@ const StaffDashboardLayout = ({ children }) => {
             <div className="header-actions">
               <button className="notification-btn" title="Notifications">
                 <i className="fas fa-bell"></i>
-                <span className="notification-badge">3</span>
+                {notificationCount > 0 && (
+                  <span className="notification-badge">{notificationCount}</span>
+                )}
               </button>
               
               <div className="profile-dropdown-container" ref={menuRef}>

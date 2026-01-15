@@ -1,10 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const ShiftAssignment = require('../models/ShiftAssignment');
-const Shift = require('../models/Shift');
-const User = require('../models/userModel');
+const shiftAssignmentController = require('../controllers/shiftAssignmentController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
+// Assign multiple staff to a shift
+router.post('/assign', protect, authorize('manager', 'admin'), shiftAssignmentController.assignStaffToShift);
+
+// Get available staff for assignment
+router.get('/available-staff', protect, authorize('manager', 'admin'), shiftAssignmentController.getAvailableStaff);
+
+// Get today's attendance based on assignments
+router.get('/today-attendance', protect, shiftAssignmentController.getTodayAttendance);
+
+// Get staff assigned to a specific shift
+router.get('/shift/:shiftId', protect, shiftAssignmentController.getStaffByShift);
+
+// Get assignments by date range
+router.get('/date-range', protect, shiftAssignmentController.getAssignmentsByDateRange);
+
+// Remove staff from shift
+router.delete('/:assignmentId', protect, authorize('manager', 'admin'), shiftAssignmentController.removeStaffFromShift);
+
+// Legacy routes (keep for backward compatibility)
 // Get shift assignments
 router.get('/', protect, async (req, res) => {
   try {

@@ -1,6 +1,6 @@
 import React from 'react';
-
 import { Link } from 'react-router-dom';
+import Navbar from '../components/common/Navbar';
 import './HistoryPage.css';
 
 const HistoryPage = () => {
@@ -106,6 +106,8 @@ const HistoryPage = () => {
 
     return (
         <div className="history-page">
+            <Navbar />
+            
             {/* Hero Section */}
             <section className="history-hero">
                 <div className="container">

@@ -8,6 +8,17 @@ const { rateLimiter } = require('../middleware/enhancedAuth');
 // Apply generous rate limiting for admin endpoints (300 requests per minute)
 const adminRateLimiter = rateLimiter(60 * 1000, 300);
 
+// Delivery staff dashboard endpoints
+router.get('/stats', protect, ctrl.getDeliveryStats);
+router.get('/tasks/assigned', protect, ctrl.getAssignedTasks);
+router.get('/pending-tasks', protect, ctrl.getPendingTasks);
+router.get('/today-deliveries', protect, ctrl.getTodayDeliveries);
+router.get('/today-pickups', protect, ctrl.getTodayPickups);
+router.get('/earnings', protect, ctrl.getEarnings);
+
+// Task action endpoints
+router.post('/tasks/:id/:action', protect, ctrl.handleTaskAction);
+
 // Create task (admin or manager)
 router.post('/', protect, adminOrManager, ctrl.createTask);
 // List all tasks (admin/manager)

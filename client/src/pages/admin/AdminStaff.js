@@ -23,11 +23,9 @@ const AdminStaff = () => {
   const noSpaces = (v) => String(v || '').replace(/\s+/g, '');
   const sanitizePhone = (v) => {
     const s = String(v || '').replace(/\s+/g, '');
-    // allow leading + then digits, or just digits
     if (s.startsWith('+')) return '+' + s.slice(1).replace(/\D+/g, '');
     return s.replace(/\D+/g, '');
   };
-  // (number input key guard removed; not used)
 
   const load = async () => {
     setLoading(true); setError(''); setSuccess('');
@@ -35,7 +33,6 @@ const AdminStaff = () => {
       const data = await listStaff({ limit: 200 });
       const list = Array.isArray(data) ? data : (Array.isArray(data?.rows) ? data.rows : (Array.isArray(data?.records) ? data.records : []));
       setRows(list);
-      // Fetch all staff users (across roles) so we can validate duplicate emails
       const su = await listStaffUsers({ limit: 200 });
       const users = su?.users || su?.records || su?.data || [];
       setStaffUsers(users);
@@ -70,9 +67,8 @@ const AdminStaff = () => {
     const doc = new jsPDF();
     let y = 20;
     
-    // Header
     doc.setFontSize(18);
-    doc.setTextColor(11, 110, 79); // Company color
+    doc.setTextColor(11, 110, 79);
     doc.text('Holy Family Polymers', 20, y);
     y += 10;
     
@@ -80,7 +76,7 @@ const AdminStaff = () => {
     doc.setTextColor(0, 0, 0);
     doc.text('Staff Registration Details', 20, y);
     y += 15;
-    // Staff Information Section
+    
     doc.setFontSize(14);
     doc.setTextColor(11, 110, 79);
     doc.text('Personal Information', 20, y);
@@ -104,7 +100,6 @@ const AdminStaff = () => {
     
     y += 5;
     
-    // Status Information
     doc.setFontSize(14);
     doc.setTextColor(11, 110, 79);
     doc.text('Registration Status', 20, y);
@@ -126,7 +121,6 @@ const AdminStaff = () => {
     
     y += 10;
     
-    // Documents Section (if any)
     if (row.documents && row.documents.length > 0) {
       doc.setFontSize(14);
       doc.setTextColor(11, 110, 79);
@@ -142,24 +136,20 @@ const AdminStaff = () => {
       y += 5;
     }
     
-    // Footer
     y += 10;
     doc.setFontSize(10);
     doc.setTextColor(128, 128, 128);
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, y);
     doc.text('Holy Family Polymers - Staff Management System', 20, y + 5);
     
-    // Save the PDF
     doc.save(`staff-${row.staffId || row.name || 'details'}.pdf`);
   };
 
   useEffect(() => { load(); }, []);
 
-  // Enhanced filtering functions
   const getFilteredStaff = () => {
     let filtered = [...rows];
     
-    // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(staff => 
@@ -170,7 +160,6 @@ const AdminStaff = () => {
       );
     }
     
-    // Role filter
     if (roleFilter !== 'all') {
       filtered = filtered.filter(staff => {
         const role = (staff.role || 'field_staff').toLowerCase();
@@ -178,7 +167,6 @@ const AdminStaff = () => {
       });
     }
     
-    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(staff => {
         const status = staff.status || 'sent';
@@ -204,26 +192,24 @@ const AdminStaff = () => {
     return stats;
   };
 
-  // Validation functions
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
   const validatePhone = (phone) => {
-    // Normalize: keep only digits, allow leading + which is removed for length check
     const raw = String(phone || '').trim();
     const normalized = raw.replace(/[\s\-()]/g, '');
     const digits = normalized.startsWith('+') ? normalized.slice(1) : normalized;
     if (!/^\d+$/.test(digits)) return false;
     if (digits.length < 10 || digits.length > 15) return false;
-    if (digits[0] === '0') return false; // avoid leading zero numbers like 000...
+    if (digits[0] === '0') return false;
     return true;
   };
 
   const validateForm = () => {
-      const errors = {};
-      
+    const errors = {};
+    
     if (!form.email.trim()) {
       errors.email = 'Email is required';
     } else if (!validateEmail(form.email)) {
@@ -249,17 +235,18 @@ const AdminStaff = () => {
     } else if (form.address.trim().length < 10) {
       errors.address = 'Address must be at least 10 characters long';
     }
-    // Staff ID validation: required; format depends on role
+    
     const id = noSpaces((form.staffId || '').toUpperCase().trim());
     const isField = form.role === 'field';
     const isLab = form.role === 'lab';
     const isDelivery = form.role === 'delivery';
     const isAccountant = form.role === 'accountant';
     const isManager = form.role === 'manager';
-    const patternField = /^HFP\d{2}$/; // e.g., HFP01 (Field/Lab default)
-    const patternAccountant = /^ACC\d{2}$/; // e.g., ACC01
-    const patternManager = /^MGR\d{2}$/; // e.g., MGR01
-    const patternDelivery = /^[A-Z]{3}-\d{4}-\d{3}$/; // e.g., STF-2025-005
+    const patternField = /^HFP\d{2}$/;
+    const patternAccountant = /^ACC\d{2}$/;
+    const patternManager = /^MGR\d{2}$/;
+    const patternDelivery = /^[A-Z]{3}-\d{4}-\d{3}$/;
+    
     if (!id) {
       errors.staffId = 'Staff ID is required';
     } else if ((isField || isLab) && !patternField.test(id)) {
@@ -271,11 +258,11 @@ const AdminStaff = () => {
     } else if (isDelivery && !patternDelivery.test(id)) {
       errors.staffId = 'For Delivery Staff, use format STF-2025-005';
     }
-    // Disallow whitespace in staffId
+    
     if ((form.staffId || '').match(/\s/)) {
       errors.staffId = 'Staff ID must not contain spaces';
     }
-    // Role validation
+    
     if (!['field','lab','delivery','accountant','manager'].includes(form.role)) {
       errors.role = 'Select a valid role';
     }
@@ -358,7 +345,6 @@ const AdminStaff = () => {
       {error && <div style={{ color: 'tomato', marginTop: 8 }}>{error}</div>}
       {success && <div style={{ color: 'limegreen', marginTop: 8 }}>{success}</div>}
 
-      {/* Staff Statistics */}
       <div className="dash-card" style={{ padding: 20, marginBottom: 20 }}>
         <h3 style={{ margin: '0 0 16px 0', color: '#1e293b' }}>Staff Overview</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 }}>
@@ -401,7 +387,6 @@ const AdminStaff = () => {
         </div>
       </div>
 
-      {/* Enhanced Filtering Controls */}
       <div className="dash-card" style={{ padding: 20, marginBottom: 20 }}>
         <h3 style={{ margin: '0 0 16px 0', color: '#1e293b' }}>Filter & Search Staff</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
@@ -476,79 +461,6 @@ const AdminStaff = () => {
         </div>
       </div>
 
-      {/* Quick Staff ID Summary */}
-      <div className="dash-card" style={{ padding: 20, marginBottom: 20 }}>
-        <h3 style={{ margin: '0 0 16px 0', color: '#1e293b' }}>Staff ID Summary</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
-          {['field', 'lab', 'delivery', 'accountant', 'manager'].map(role => {
-            const roleStaff = rows.filter(r => (r.role || '').includes(role));
-            const withIds = roleStaff.filter(r => r.staffId);
-            const withoutIds = roleStaff.filter(r => !r.staffId);
-            
-            return (
-              <div key={role} style={{ 
-                padding: 16, 
-                backgroundColor: '#f8fafc', 
-                borderRadius: 8,
-                border: '1px solid #e2e8f0'
-              }}>
-                <h4 style={{ margin: '0 0 12px 0', color: '#1e293b', textTransform: 'capitalize' }}>
-                  {role === 'field' ? 'Field Staff' : 
-                   role === 'lab' ? 'Lab Staff' : 
-                   role === 'delivery' ? 'Delivery Staff' : 
-                   role === 'accountant' ? 'Accountant' :
-                   'Manager'} ({roleStaff.length})
-                </h4>
-                
-                {withIds.length > 0 && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>
-                      ✅ With Staff IDs ({withIds.length})
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      {withIds.slice(0, 5).map(staff => (
-                        <span 
-                          key={staff._id}
-                          style={{ 
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            padding: '2px 6px',
-                            backgroundColor: '#dcfce7',
-                            color: '#16a34a',
-                            borderRadius: 4,
-                            border: '1px solid #16a34a'
-                          }}
-                        >
-                          {staff.staffId}
-                        </span>
-                      ))}
-                      {withIds.length > 5 && (
-                        <span style={{ fontSize: 11, color: '#64748b' }}>
-                          +{withIds.length - 5} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                {withoutIds.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>
-                      ❌ Missing Staff IDs ({withoutIds.length})
-                    </div>
-                    <div style={{ fontSize: 11, color: '#dc2626' }}>
-                      {withoutIds.slice(0, 3).map(staff => staff.name).join(', ')}
-                      {withoutIds.length > 3 && ` +${withoutIds.length - 3} more`}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-
       <div style={{ 
         marginTop: 24,
         padding: '20px',
@@ -566,179 +478,94 @@ const AdminStaff = () => {
           gap: 16, 
           gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))'
         }}>
-
-      <form onSubmit={onInviteSubmit} style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', marginTop: 12 }}>
-
-        <div>
-          <label>Name *</label><br />
-          <input 
-            type="text" 
-            value={form.name} 
-            onChange={(e)=>setForm({ ...form, name: e.target.value })} 
-            placeholder="Full Name" 
-            required 
-            style={{ borderColor: validationErrors.name ? '#dc3545' : '' }}
-          />
-          {validationErrors.name && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.name}</div>}
-        </div>
-        <div>
-
-
-          <label>Role *</label><br />
-          <select
-            value={form.role}
-            onChange={(e)=>setForm({ ...form, role: e.target.value })}
-            required
-            style={{ width:'100%', borderColor: validationErrors.role ? '#dc3545' : '' }}
-          >
-            <option value="field">Field Staff</option>
-            <option value="lab">Lab Staff</option>
-            <option value="delivery">Delivery Staff</option>
-            <option value="accountant">Accountant</option>
-            <option value="manager">Manager</option>
-          </select>
-          {validationErrors.role && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.role}</div>}
-        </div>
-        <div>
-          <label>
-            {(() => {
-              if (form.role === 'delivery') return 'Staff ID (e.g., STF-2025-005) *';
-              if (form.role === 'accountant') return 'Staff ID (e.g., ACC01) *';
-              if (form.role === 'manager') return 'Staff ID (e.g., MGR01) *';
-              return 'Staff ID (HFP01) *';
-            })()}
-          </label><br />
-          <div style={{ display:'flex', gap:8 }}>
+          <div>
+            <label>Name *</label><br />
             <input 
-              type="text"
-              value={form.staffId}
-              onChange={(e)=>setForm({ ...form, staffId: noSpaces(e.target.value.toUpperCase()) })}
-              placeholder={form.role === 'delivery' ? 'STF-2025-005' : (form.role === 'accountant' ? 'ACC01' : (form.role === 'manager' ? 'MGR01' : 'HFP01'))}
-              required
-              maxLength={form.role === 'delivery' ? 13 : 5}
-              style={{ flex:1, borderColor: validationErrors.staffId ? '#dc3545' : '' }}
-              onKeyDown={(e)=>{ if (e.key === ' ') e.preventDefault(); }}
+              type="text" 
+              value={form.name} 
+              onChange={(e)=>setForm({ ...form, name: e.target.value })} 
+              placeholder="Full Name" 
+              required 
+              style={{ borderColor: validationErrors.name ? '#dc3545' : '' }}
             />
-            {form.role !== 'delivery' && (
-              <button type="button" className="btn btn-outline" onClick={()=>{
-                // Generate next available ID by role prefix
-                const prefix = form.role === 'accountant' ? 'ACC' : (form.role === 'manager' ? 'MGR' : 'HFP');
-                const all = [...rows, ...staffUsers];
-                let max = 0;
-                all.forEach(u=>{
-                  const sid = (u.staffId || u.staff_id || '').toString();
-                  const up = sid.toUpperCase();
-                  const m = up.startsWith(prefix) ? up.slice(prefix.length).match(/^(\d{2})$/) : null;
-                  if (m) { const num = parseInt(m[1],10); if (!Number.isNaN(num)) max = Math.max(max, num); }
-                });
-                const next = Math.min(99, max + 1);
-                const nextId = `${prefix}${String(next).padStart(2,'0')}`;
-                setForm(f=>({ ...f, staffId: nextId }));
-              }}>Generate</button>
-            )}
+            {validationErrors.name && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.name}</div>}
           </div>
-          {validationErrors.staffId && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.staffId}</div>}
-        </div>
-        <div>
-
-          <label>Email *</label><br />
-          <input 
-            type="email" 
-            value={form.email}
-            onChange={(e)=>{
-              const val = noSpaces(e.target.value);
-              setForm({ ...form, email: val });
-              // immediate client-side duplicate check
-              const lower = val.toLowerCase();
-              const inInvites = rows.some(r => (r.email || '').toLowerCase() === lower);
-              const inUsers = staffUsers.some(u => (u.email || '').toLowerCase() === lower);
-              setEmailTaken(inInvites || inUsers);
-            }} 
-            placeholder="staff@example.com" 
-            required 
-            style={{ borderColor: validationErrors.email ? '#dc3545' : '' }}
-          />
-          {validationErrors.email && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.email}</div>}
-          {(!validationErrors.email && emailTaken) && <div style={{ color: '#d97706', fontSize: '12px', marginTop: '4px' }}>Email already used</div>}
-        </div>
-        <div>
-          <label>Phone Number *</label><br />
-          <input 
-            type="tel" 
-            inputMode="numeric"
-            value={form.phone}
-            onChange={(e)=>setForm({ ...form, phone: sanitizePhone(e.target.value) })} 
-            placeholder="9876543210 or +919876543210" 
-            required 
-            style={{ borderColor: validationErrors.phone ? '#dc3545' : '' }}
-            onKeyDown={(e)=>{ if (e.key === ' ') e.preventDefault(); }}
-          />
-          {validationErrors.phone && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.phone}</div>}
-        </div>
-
-        <div>
-          <label>Role *</label><br />
-          <select
-            value={form.role}
-            onChange={(e)=>setForm({ ...form, role: e.target.value })}
-            required
-            style={{ width:'100%', borderColor: validationErrors.role ? '#dc3545' : '' }}
-          >
-            <option value="field">Field Staff</option>
-            <option value="lab">Lab Staff</option>
-            <option value="delivery">Delivery Staff</option>
-            <option value="accountant">Accountant</option>
-            <option value="manager">Manager</option>
-          </select>
-          {validationErrors.role && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.role}</div>}
-        </div>
-        <div>
-          <label>
-            {(() => {
-              if (form.role === 'delivery') return 'Staff ID (e.g., STF-2025-005) *';
-              if (form.role === 'accountant') return 'Staff ID (e.g., ACC01) *';
-              if (form.role === 'manager') return 'Staff ID (e.g., MGR01) *';
-              return 'Staff ID (HFP01) *';
-            })()}
-          </label><br />
-          <div style={{ 
-            display:'flex', 
-            gap: 6, 
-            alignItems: 'stretch',
-            width: '100%',
-            maxWidth: '100%',
-            overflow: 'hidden'
-          }}>
+          
+          <div>
+            <label>Email *</label><br />
             <input 
-              type="text"
-              value={form.staffId}
-              onChange={(e)=>setForm({ ...form, staffId: noSpaces(e.target.value.toUpperCase()) })}
-              placeholder={form.role === 'delivery' ? 'STF-2025-005' : (form.role === 'accountant' ? 'ACC01' : (form.role === 'manager' ? 'MGR01' : 'HFP01'))}
-              required
-              maxLength={form.role === 'delivery' ? 13 : 5}
-              style={{ 
-                flex: 1, 
-                borderColor: validationErrors.staffId ? '#dc3545' : '',
-                minWidth: 0,
-                width: 'auto'
-              }}
+              type="email" 
+              value={form.email}
+              onChange={(e)=>{
+                const val = noSpaces(e.target.value);
+                setForm({ ...form, email: val });
+                const lower = val.toLowerCase();
+                const inInvites = rows.some(r => (r.email || '').toLowerCase() === lower);
+                const inUsers = staffUsers.some(u => (u.email || '').toLowerCase() === lower);
+                setEmailTaken(inInvites || inUsers);
+              }} 
+              placeholder="staff@example.com" 
+              required 
+              style={{ borderColor: validationErrors.email ? '#dc3545' : '' }}
+            />
+            {validationErrors.email && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.email}</div>}
+            {(!validationErrors.email && emailTaken) && <div style={{ color: '#d97706', fontSize: '12px', marginTop: '4px' }}>Email already used</div>}
+          </div>
+          
+          <div>
+            <label>Phone Number *</label><br />
+            <input 
+              type="tel" 
+              inputMode="numeric"
+              value={form.phone}
+              onChange={(e)=>setForm({ ...form, phone: sanitizePhone(e.target.value) })} 
+              placeholder="9876543210 or +919876543210" 
+              required 
+              style={{ borderColor: validationErrors.phone ? '#dc3545' : '' }}
               onKeyDown={(e)=>{ if (e.key === ' ') e.preventDefault(); }}
             />
-            {form.role !== 'delivery' && (
-              <button 
-                type="button" 
-                className="btn btn-outline" 
-                style={{ 
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  padding: '6px 10px',
-                  fontSize: '11px',
-                  height: 'auto',
-                  minWidth: '70px',
-                  maxWidth: '80px'
-                }}
-                onClick={()=>{
-                  // Generate next available ID by role prefix
+            {validationErrors.phone && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.phone}</div>}
+          </div>
+          
+          <div>
+            <label>Role *</label><br />
+            <select
+              value={form.role}
+              onChange={(e)=>setForm({ ...form, role: e.target.value })}
+              required
+              style={{ width:'100%', borderColor: validationErrors.role ? '#dc3545' : '' }}
+            >
+              <option value="field">Field Staff</option>
+              <option value="lab">Lab Staff</option>
+              <option value="delivery">Delivery Staff</option>
+              <option value="accountant">Accountant</option>
+              <option value="manager">Manager</option>
+            </select>
+            {validationErrors.role && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.role}</div>}
+          </div>
+          
+          <div>
+            <label>
+              {(() => {
+                if (form.role === 'delivery') return 'Staff ID (e.g., STF-2025-005) *';
+                if (form.role === 'accountant') return 'Staff ID (e.g., ACC01) *';
+                if (form.role === 'manager') return 'Staff ID (e.g., MGR01) *';
+                return 'Staff ID (HFP01) *';
+              })()}
+            </label><br />
+            <div style={{ display:'flex', gap:8 }}>
+              <input 
+                type="text"
+                value={form.staffId}
+                onChange={(e)=>setForm({ ...form, staffId: noSpaces(e.target.value.toUpperCase()) })}
+                placeholder={form.role === 'delivery' ? 'STF-2025-005' : (form.role === 'accountant' ? 'ACC01' : (form.role === 'manager' ? 'MGR01' : 'HFP01'))}
+                required
+                maxLength={form.role === 'delivery' ? 13 : 5}
+                style={{ flex:1, borderColor: validationErrors.staffId ? '#dc3545' : '' }}
+                onKeyDown={(e)=>{ if (e.key === ' ') e.preventDefault(); }}
+              />
+              {form.role !== 'delivery' && (
+                <button type="button" className="btn btn-outline" onClick={()=>{
                   const prefix = form.role === 'accountant' ? 'ACC' : (form.role === 'manager' ? 'MGR' : 'HFP');
                   const all = [...rows, ...staffUsers];
                   let max = 0;
@@ -751,110 +578,102 @@ const AdminStaff = () => {
                   const next = Math.min(99, max + 1);
                   const nextId = `${prefix}${String(next).padStart(2,'0')}`;
                   setForm(f=>({ ...f, staffId: nextId }));
-                }}
-              >
-                Gen
-              </button>
-            )}
+                }}>Generate</button>
+              )}
+            </div>
+            {validationErrors.staffId && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.staffId}</div>}
           </div>
-          {validationErrors.staffId && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.staffId}</div>}
-        </div>
+          
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label>Address *</label><br />
+            <textarea 
+              value={form.address} 
+              onChange={(e)=>setForm({ ...form, address: e.target.value })} 
+              placeholder="Complete address with city, state, postal code" 
+              required 
+              rows={3}
+              style={{ width: '100%', borderColor: validationErrors.address ? '#dc3545' : '' }}
+            />
+            {validationErrors.address && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.address}</div>}
+          </div>
+          
+          <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12 }}>
+            <button type="submit" className="btn btn-primary" disabled={loading || Object.keys(validationErrors).length > 0}>
+              {loading ? 'Validating...' : 'Send Invitation'}
+            </button>
+          </div>
+        </form>
 
-
-        <div style={{ gridColumn: '1 / -1' }}>
-          <label>Address *</label><br />
-          <textarea 
-            value={form.address} 
-            onChange={(e)=>setForm({ ...form, address: e.target.value })} 
-            placeholder="Complete address with city, state, postal code" 
-            required 
-            rows={3}
-            style={{ width: '100%', borderColor: validationErrors.address ? '#dc3545' : '' }}
-          />
-          {validationErrors.address && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.address}</div>}
-        </div>
-        <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12 }}>
-          <button type="submit" className="btn btn-primary" disabled={loading || Object.keys(validationErrors).length > 0}>
-            {loading ? 'Validating...' : 'Send Invitation'}
-          </button>
-        </div>
-      </form>
-
-      </div>
-
-
-
-      {/* Confirmation Modal */}
-      {showConfirmation && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 2000,
-          opacity: 1
-        }}>
+        {showConfirmation && (
           <div style={{
-            backgroundColor: 'white',
-            padding: '24px',
-            borderRadius: '8px',
-            maxWidth: '520px',
-            width: '90%',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-            color: '#111',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
             opacity: 1
           }}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px', color: '#0B6E4F' }}>Confirm Staff Invitation</h3>
-            <p style={{ marginBottom: '16px', color: '#374151' }}>Please review the details before sending the invitation:</p>
-            <div style={{ 
-              backgroundColor: '#f8f9fa', 
-              padding: '14px', 
-              borderRadius: '6px', 
-              marginBottom: '16px',
+            <div style={{
+              backgroundColor: 'white',
+              padding: '24px',
+              borderRadius: '8px',
+              maxWidth: '520px',
+              width: '90%',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
               color: '#111',
-              opacity: 1,
-              border: '1px solid #e5e7eb'
+              opacity: 1
             }}>
-              <div style={{ marginBottom: 6 }}><strong>Name:</strong> <span style={{ color: '#111' }}>{form.name}</span></div>
-              <div style={{ marginBottom: 6 }}><strong>Email:</strong> <span style={{ color: '#111' }}>{form.email}</span></div>
-              <div style={{ marginBottom: 6 }}><strong>Phone:</strong> <span style={{ color: '#111' }}>{form.phone}</span></div>
-              <div style={{ marginBottom: 6 }}><strong>Address:</strong> <span style={{ color: '#111' }}>{form.address}</span></div>
-              <div style={{ marginBottom: 6 }}><strong>Role:</strong> <span style={{ color: '#111' }}>{
-                form.role === 'lab' ? 'Lab Staff' : 
-                (form.role === 'delivery' ? 'Delivery Staff' : 
-                (form.role === 'accountant' ? 'Accountant' : 
-                (form.role === 'manager' ? 'Manager' : 'Field Staff')))
-              }</span></div>
-              <div><strong>Staff ID:</strong> <span style={{ color: '#111' }}>{(form.staffId || '').toUpperCase()}</span></div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button 
-                type="button" 
-                className="btn btn-outline" 
-                onClick={onInviteCancel}
-                disabled={loading}
-              >
-                Cancel
-              </button>
-              <button 
-                type="button" 
-                className="btn btn-primary" 
-                onClick={onInviteConfirm}
-                disabled={loading}
-              >
-                {loading ? 'Sending...' : 'Send Invitation'}
-              </button>
+              <h3 style={{ marginTop: 0, marginBottom: '16px', color: '#0B6E4F' }}>Confirm Staff Invitation</h3>
+              <p style={{ marginBottom: '16px', color: '#374151' }}>Please review the details before sending the invitation:</p>
+              <div style={{ 
+                backgroundColor: '#f8f9fa', 
+                padding: '14px', 
+                borderRadius: '6px', 
+                marginBottom: '16px',
+                color: '#111',
+                opacity: 1,
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{ marginBottom: 6 }}><strong>Name:</strong> <span style={{ color: '#111' }}>{form.name}</span></div>
+                <div style={{ marginBottom: 6 }}><strong>Email:</strong> <span style={{ color: '#111' }}>{form.email}</span></div>
+                <div style={{ marginBottom: 6 }}><strong>Phone:</strong> <span style={{ color: '#111' }}>{form.phone}</span></div>
+                <div style={{ marginBottom: 6 }}><strong>Address:</strong> <span style={{ color: '#111' }}>{form.address}</span></div>
+                <div style={{ marginBottom: 6 }}><strong>Role:</strong> <span style={{ color: '#111' }}>{
+                  form.role === 'lab' ? 'Lab Staff' : 
+                  (form.role === 'delivery' ? 'Delivery Staff' : 
+                  (form.role === 'accountant' ? 'Accountant' : 
+                  (form.role === 'manager' ? 'Manager' : 'Field Staff')))
+                }</span></div>
+                <div><strong>Staff ID:</strong> <span style={{ color: '#111' }}>{(form.staffId || '').toUpperCase()}</span></div>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button 
+                  type="button" 
+                  className="btn btn-outline" 
+                  onClick={onInviteCancel}
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  onClick={onInviteConfirm}
+                  disabled={loading}
+                >
+                  {loading ? 'Sending...' : 'Send Invitation'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Pending Approvals Section */}
       {rows.filter(r => r.status === 'verified').length > 0 && (
         <div style={{ 
           marginTop: 24, 
@@ -1061,7 +880,6 @@ const AdminStaff = () => {
         </table>
       </div>
 
-      {/* Staff IDs Only View */}
       {showStaffIdOnly && (
         <div className="dash-card" style={{ padding: 20, marginBottom: 20 }}>
           <h3 style={{ margin: '0 0 16px 0', color: '#1e293b' }}>Staff IDs Quick Reference</h3>

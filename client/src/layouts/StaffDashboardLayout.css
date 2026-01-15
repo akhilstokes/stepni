@@ -31,13 +31,13 @@
 
 /* Sidebar Header */
 .sidebar-header {
-  padding: 28px 24px;
+  padding: 14px 16px;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: #ffffff;
-  min-height: 80px; /* Taller header for web */
+  min-height: 60px;
 }
 
 .header-controls {
@@ -53,28 +53,28 @@
 }
 
 .brand-icon {
-  width: 50px;
-  height: 50px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  border-radius: 14px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 20px;
+  font-size: 16px;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .brand-text h3 {
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 700;
   color: #1e293b;
-  margin: 0 0 3px 0;
+  margin: 0 0 2px 0;
   letter-spacing: -0.025em;
 }
 
 .brand-text span {
-  font-size: 14px;
+  font-size: 10px;
   color: #64748b;
   font-weight: 500;
   text-transform: uppercase;
@@ -102,73 +102,25 @@
   transform: scale(1.05);
 }
 
-/* User Profile Section */
-.user-profile-section {
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  margin: 0 20px 24px 20px;
-  border-radius: 18px;
-  border: 1px solid #e2e8f0;
-}
-
-.user-avatar {
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 22px;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.user-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.user-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.user-role {
-  font-size: 14px;
-  color: #64748b;
-  font-weight: 500;
-  text-transform: capitalize;
-}
-
 /* Navigation */
 .sidebar-nav {
   flex: 1;
-  padding: 0 20px;
+  padding: 0 16px;
   overflow-y: auto;
 }
 
 .nav-section {
-  margin-bottom: 28px;
+  margin-bottom: 18px;
 }
 
 .section-title {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: #64748b;
-  margin-bottom: 16px;
-  padding-left: 20px;
+  margin-bottom: 10px;
+  padding-left: 14px;
 }
 
 .nav-list {
@@ -177,7 +129,7 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
 }
 
 .nav-item {
@@ -187,17 +139,17 @@
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 18px 20px;
-  border-radius: 16px;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
   text-decoration: none;
   color: #64748b;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .nav-link::before {
@@ -210,7 +162,7 @@
   background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
-  border-radius: 16px;
+  border-radius: 10px;
 }
 
 .nav-link:hover {
@@ -232,12 +184,12 @@
 }
 
 .nav-icon {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 15px;
   flex-shrink: 0;
   position: relative;
   z-index: 1;
@@ -253,7 +205,7 @@
 
 /* Sidebar Footer */
 .sidebar-footer {
-  padding: 20px 16px;
+  padding: 14px 16px;
   border-top: 1px solid #e2e8f0;
   background: #ffffff;
 }
@@ -263,13 +215,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 10px 14px;
   background: transparent;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 10px;
   color: #64748b;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;

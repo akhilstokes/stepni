@@ -147,6 +147,15 @@ const userSchema = new mongoose.Schema({
     assignedShift: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Shift' 
+    },
+
+    // RFID UID for attendance tracking
+    rfidUid: {
+        type: String,
+        unique: true,
+        sparse: true,
+        trim: true,
+        uppercase: true
     }
 
 }, { timestamps: true });

@@ -121,6 +121,8 @@ app.use('/api/sell-requests', require('./routes/sellRequestRoutes'));
 app.use('/api/staff-invite', require('./routes/staffInviteRoutes'));
 app.use('/api/staff-records', require('./routes/staffRecordRoutes'));
 app.use('/api/staff', require('./routes/staffTripRoutes'));
+app.use('/api/field-staff', require('./routes/fieldStaffRoutes'));
+app.use('/api/admin/return-barrels', require('./routes/adminReturnBarrelRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/bulk-notifications', require('./routes/bulkNotificationRoutes'));
 app.use('/api/delivery', require('./routes/deliveryRoutes'));
@@ -149,6 +151,7 @@ app.use('/api/unified-salary', require('./routes/unifiedSalaryRoutes'));
 // New dashboard routes
 app.use('/api/staff-dashboard', require('./routes/staffDashboard'));
 app.use('/api/manager-dashboard', require('./routes/managerDashboard'));
+app.use('/api/manager/schedule', require('./routes/staffScheduleRoutes'));
 app.use('/api/admin-dashboard', require('./routes/adminDashboard'));
 app.use('/api/user-dashboard', require('./routes/userDashboard'));
 

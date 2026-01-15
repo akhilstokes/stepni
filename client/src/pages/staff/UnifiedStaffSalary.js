@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-
 import './UnifiedStaffSalary.css';
-
-
 
 const UnifiedStaffSalary = () => {
   const { user } = useAuth();
@@ -11,12 +8,7 @@ const UnifiedStaffSalary = () => {
   const [salaryData, setSalaryData] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
-
-
-  // Salary table data - initially empty, will be populated by manager
   const [salaryTableData, setSalaryTableData] = useState([]);
-
-
 
   // Determine salary type based on user role
   const getSalaryType = (role) => {
@@ -30,7 +22,7 @@ const UnifiedStaffSalary = () => {
       case 'lab_manager':
         return 'monthly';
       default:
-        return 'monthly'; // Default to monthly for admin, manager, accountant, etc.
+        return 'monthly';
     }
   };
 
@@ -52,22 +44,44 @@ const UnifiedStaffSalary = () => {
   const salaryType = getSalaryType(user?.role);
   const viewTitle = getSalaryViewTitle(user?.role);
 
+  // Load salary data
   useEffect(() => {
     const loadSalaryData = async () => {
       if (!user?._id) return;
-
+      
       setLoading(true);
       try {
         const base = process.env.REACT_APP_API_URL || 'http://localhost:5000';
         const token = localStorage.getItem('token');
-
-        const res = await fetch(`${base}/api/unified-salary/unified`, {
+        
+        // Load current salary data
+        const currentResponse = await fetch(`${base}/api/salary/current/${user._id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        
+        if (currentResponse.ok) {
+          const currentData = await currentResponse.json();
+          setSalaryData(currentData);
+        }
 
-        if (res.ok) {
-          const data = await res.json();
-          setSalaryData(data.data);
+        // Load salary history
+        const historyResponse = await fetch(`${base}/api/salary/history/${user._id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (historyResponse.ok) {
+          const historyData = await historyResponse.json();
+          setHistory(historyData.data || []);
+        }
+
+        // Load salary table data
+        const tableResponse = await fetch(`${base}/api/salary/table/${user._id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (tableResponse.ok) {
+          const tableData = await tableResponse.json();
+          setSalaryTableData(tableData.data || []);
         }
       } catch (error) {
         console.error('Error loading salary data:', error);
@@ -79,36 +93,14 @@ const UnifiedStaffSalary = () => {
     loadSalaryData();
   }, [user]);
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      if (!user?._id) return;
-
-      try {
-        const base = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-        const token = localStorage.getItem('token');
-
-        const res = await fetch(`${base}/api/unified-salary/unified/history`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setHistory(data.data || []);
-        }
-      } catch (error) {
-        console.error('Error loading salary history:', error);
-      }
-    };
-
-    loadHistory();
-  }, [user]);
-
-
-  if (loading) return (
-    <div className="loading-spinner">
-      <div className="spinner"></div>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="loading-spinner">
+        <div className="spinner"></div>
+        <p>Loading salary information...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="unified-salary-container">
@@ -117,507 +109,167 @@ const UnifiedStaffSalary = () => {
           <div className="salary-header">
             <h3>{viewTitle}</h3>
             <div className="view-toggle-group">
-                  <button
+              <button
                 className={`view-toggle-btn ${activeView === 'current' ? 'active' : ''}`}
-
-  if (loading) return <div className="text-center"><div className="spinner-border"></div></div>;
-
-  return (
-    <div className="container-fluid">
-      <div className="row">
-        <div className="col-12">
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">{viewTitle}</h3>
-              <div className="card-tools">
-                <div className="btn-group" role="group">
-                  <button
-                    type="button"
-                    className={`btn ${activeView === 'current' ? 'btn-primary' : 'btn-outline-primary'}`}
-
-                    onClick={() => setActiveView('current')}
-                  >
-                    Current Period
-                  </button>
-                  <button
-
+                onClick={() => setActiveView('current')}
+              >
+                Current Period
+              </button>
+              <button
                 className={`view-toggle-btn ${activeView === 'table' ? 'active' : ''}`}
-                    onClick={() => setActiveView('table')}
-                  >
-                    Salary Table
-                  </button>
-                  <button
+                onClick={() => setActiveView('table')}
+              >
+                Salary Table
+              </button>
+              <button
                 className={`view-toggle-btn ${activeView === 'history' ? 'active' : ''}`}
-
-                    type="button"
-                    className={`btn ${activeView === 'history' ? 'btn-primary' : 'btn-outline-primary'}`}
-
-                    onClick={() => setActiveView('history')}
-                  >
-                    History
-                  </button>
-
-              </div>
+                onClick={() => setActiveView('history')}
+              >
+                History
+              </button>
             </div>
+          </div>
 
-          <div className="salary-body">
-              {/* Role-based salary type indicator */}
-            <div className="salary-type-info">
-                <h5><i className="fas fa-info-circle"></i> Your Salary Type</h5>
-              <p>
-                  <strong>Role:</strong> {user?.role?.replace('_', ' ').toUpperCase()} |
-                  <strong> Payment Type:</strong> {salaryType === 'daily' ? 'Daily Wage' : 'Monthly Salary'}
-                </p>
-              <small>
-
-                </div>
-              </div>
-            </div>
-
-            <div className="card-body">
-              {/* Role-based salary type indicator */}
-              <div className="alert alert-info mb-4">
-                <h5><i className="fas fa-info-circle"></i> Your Salary Type</h5>
-                <p className="mb-0">
-                  <strong>Role:</strong> {user?.role?.replace('_', ' ').toUpperCase()} |
-                  <strong> Payment Type:</strong> {salaryType === 'daily' ? 'Daily Wage' : 'Monthly Salary'}
-                </p>
-                <small className="text-muted">
-
-                  {salaryType === 'daily'
-                    ? 'Your salary is calculated based on daily attendance and wage rate.'
-                    : 'Your salary is calculated based on monthly salary template and allowances.'
-                  }
-                </small>
-              </div>
-
-              {/* Render appropriate salary view based on role */}
-              {activeView === 'current' ? (
-                salaryData ? (
-                  <CurrentSalaryView salaryData={salaryData} salaryType={salaryType} />
+          <div className="salary-content">
+            {activeView === 'current' && (
+              <div className="current-salary-view">
+                {salaryData ? (
+                  <div className="salary-details">
+                    <div className="salary-summary">
+                      <div className="salary-item">
+                        <label>Basic Salary:</label>
+                        <span>₹{salaryData.basicSalary || 0}</span>
+                      </div>
+                      <div className="salary-item">
+                        <label>Gross Salary:</label>
+                        <span>₹{salaryData.grossSalary || 0}</span>
+                      </div>
+                      <div className="salary-item">
+                        <label>Net Salary:</label>
+                        <span>₹{salaryData.netSalary || 0}</span>
+                      </div>
+                      <div className="salary-item">
+                        <label>Status:</label>
+                        <span className={`status ${salaryData.status}`}>
+                          {salaryData.status || 'Pending'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {salaryType === 'daily' && (
+                      <div className="daily-wage-info">
+                        <h4>Daily Wage Information</h4>
+                        <div className="wage-details">
+                          <div className="wage-item">
+                            <label>Daily Rate:</label>
+                            <span>₹{salaryData.dailyRate || 0}</span>
+                          </div>
+                          <div className="wage-item">
+                            <label>Days Worked:</label>
+                            <span>{salaryData.daysWorked || 0}</span>
+                          </div>
+                          <div className="wage-item">
+                            <label>Total Earnings:</label>
+                            <span>₹{(salaryData.dailyRate || 0) * (salaryData.daysWorked || 0)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
-
-                <div className="no-data-message">
-
-                  <div className="alert alert-info">
-
-                    <h5>No Salary Data Available</h5>
-                    <p>Please contact HR to set up your salary structure.</p>
+                  <div className="no-salary-data">
+                    <p>No salary data available for the current period.</p>
+                    <p>Please contact your manager for more information.</p>
                   </div>
-                )
-
-              ) : activeView === 'table' ? (
-                <SalaryTableView salaryTableData={salaryTableData} />
-              ) : (
-                <UnifiedSalaryHistoryView history={history} salaryType={salaryType} />
-              )}
-
-              ) : (
-                <UnifiedSalaryHistoryView history={history} salaryType={salaryType} />
-              )}
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Current Salary View Component
-const CurrentSalaryView = ({ salaryData, salaryType }) => {
-  if (salaryType === 'daily') {
-    return (
-
-      <div className="salary-cards-grid">
-        <div className="salary-detail-card">
-          <h5>💰 Daily Wage Details</h5>
-          <div className="salary-row">
-            <span className="salary-label">Working Days</span>
-            <span className="salary-value">{salaryData.salary?.workingDays || 0}</span>
-          </div>
-          <div className="salary-row">
-            <span className="salary-label">Daily Wage</span>
-            <span className="salary-value">₹{salaryData.salary?.dailyWage?.toLocaleString() || '0'}</span>
-          </div>
-          <div className="salary-row">
-            <span className="salary-label">Gross Salary</span>
-            <span className="salary-value positive">₹{salaryData.salary?.grossSalary?.toLocaleString() || '0'}</span>
-          </div>
-          {salaryData.salary?.totalBenefits > 0 && (
-            <div className="salary-row">
-              <span className="salary-label">Total Benefits</span>
-              <span className="salary-value positive">₹{salaryData.salary.totalBenefits?.toLocaleString()}</span>
-            </div>
-              )}
-            </div>
-        <div className="salary-detail-card">
-          <h5>📊 Payment Summary</h5>
-          <div className="salary-row">
-            <span className="salary-label">Received</span>
-            <span className="salary-value positive">₹{salaryData.salary?.receivedAmount?.toLocaleString() || '0'}</span>
-          </div>
-          <div className="salary-row">
-            <span className="salary-label">Advance</span>
-            <span className="salary-value">₹{salaryData.salary?.advanceAmount?.toLocaleString() || '0'}</span>
-        </div>
-          <div className="salary-row">
-            <span className="salary-label">Bonus</span>
-            <span className="salary-value positive">₹{salaryData.salary?.bonusAmount?.toLocaleString() || '0'}</span>
-            </div>
-          <div className="salary-row">
-            <span className="salary-label">Deductions</span>
-            <span className="salary-value negative">₹{salaryData.salary?.deductionAmount?.toLocaleString() || '0'}</span>
-            </div>
-          <hr className="salary-divider" />
-          <div className="salary-row salary-total-row">
-            <span className="salary-label">Pending</span>
-            <span className="salary-value">₹{salaryData.salary?.pendingAmount?.toLocaleString() || '0'}</span>
-
-      <div className="row">
-        <div className="col-md-6">
-          <div className="card">
-            <div className="card-header">
-              <h5>Daily Wage Details</h5>
-            </div>
-            <div className="card-body">
-              <p><strong>Working Days:</strong> {salaryData.salary?.workingDays || 0}</p>
-              <p><strong>Daily Wage:</strong> ₹{salaryData.salary?.dailyWage?.toLocaleString() || '0'}</p>
-              <p><strong>Gross Salary:</strong> ₹{salaryData.salary?.grossSalary?.toLocaleString() || '0'}</p>
-              {salaryData.salary?.totalBenefits > 0 && (
-                <p><strong>Total Benefits:</strong> ₹{salaryData.salary.totalBenefits?.toLocaleString()}</p>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="col-md-6">
-          <div className="card">
-            <div className="card-header">
-              <h5>Payment Summary</h5>
-            </div>
-            <div className="card-body">
-              <p><strong>Received:</strong> ₹{salaryData.salary?.receivedAmount?.toLocaleString() || '0'}</p>
-              <p><strong>Advance:</strong> ₹{salaryData.salary?.advanceAmount?.toLocaleString() || '0'}</p>
-              <p><strong>Bonus:</strong> ₹{salaryData.salary?.bonusAmount?.toLocaleString() || '0'}</p>
-              <p><strong>Deductions:</strong> ₹{salaryData.salary?.deductionAmount?.toLocaleString() || '0'}</p>
-              <p><strong>Pending:</strong> ₹{salaryData.salary?.pendingAmount?.toLocaleString() || '0'}</p>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    );
-  } else {
-    // Monthly salary view
-    return (
-
-      <div className="salary-cards-grid">
-        <div className="salary-detail-card">
-          <h5>💰 Salary Breakdown</h5>
-          <div className="salary-row">
-            <span className="salary-label">Basic Salary</span>
-            <span className="salary-value">₹{salaryData.salary?.basicSalary?.toLocaleString() || '0'}</span>
-            </div>
-          <div className="salary-row">
-            <span className="salary-label">House Rent Allowance</span>
-            <span className="salary-value">₹{salaryData.salary?.houseRentAllowance?.toLocaleString() || '0'}</span>
-                </div>
-          <div className="salary-row">
-            <span className="salary-label">Medical Allowance</span>
-            <span className="salary-value">₹{salaryData.salary?.medicalAllowance?.toLocaleString() || '0'}</span>
-                </div>
-          <div className="salary-row">
-            <span className="salary-label">Transport Allowance</span>
-            <span className="salary-value">₹{salaryData.salary?.transportAllowance?.toLocaleString() || '0'}</span>
-                </div>
-          <div className="salary-row">
-            <span className="salary-label">Special Allowance</span>
-            <span className="salary-value">₹{salaryData.salary?.specialAllowance?.toLocaleString() || '0'}</span>
-                </div>
-          <div className="salary-row">
-            <span className="salary-label">Bonus</span>
-            <span className="salary-value positive">₹{salaryData.salary?.bonus?.toLocaleString() || '0'}</span>
-                </div>
-          <div className="salary-row">
-            <span className="salary-label">Overtime</span>
-            <span className="salary-value positive">₹{salaryData.salary?.overtime?.toLocaleString() || '0'}</span>
-                </div>
-          <hr className="salary-divider" />
-          <div className="salary-row salary-total-row">
-            <span className="salary-label">Gross Salary</span>
-            <span className="salary-value positive">₹{salaryData.salary?.grossSalary?.toLocaleString() || '0'}</span>
-          </div>
-        </div>
-        <div className="salary-detail-card">
-          <h5>📉 Deductions & Net Salary</h5>
-          <div className="salary-row">
-            <span className="salary-label">Provident Fund</span>
-            <span className="salary-value negative">₹{salaryData.salary?.providentFund?.toLocaleString() || '0'}</span>
-            </div>
-          <div className="salary-row">
-            <span className="salary-label">Professional Tax</span>
-            <span className="salary-value negative">₹{salaryData.salary?.professionalTax?.toLocaleString() || '0'}</span>
-                </div>
-          <div className="salary-row">
-            <span className="salary-label">Income Tax</span>
-            <span className="salary-value negative">₹{salaryData.salary?.incomeTax?.toLocaleString() || '0'}</span>
-                </div>
-          <div className="salary-row">
-            <span className="salary-label">Other Deductions</span>
-            <span className="salary-value negative">₹{salaryData.salary?.otherDeductions?.toLocaleString() || '0'}</span>
-                </div>
-          <hr className="salary-divider" />
-          <div className="salary-row salary-total-row">
-            <span className="salary-label">Net Salary</span>
-            <span className="salary-value positive">₹{salaryData.salary?.netSalary?.toLocaleString() || '0'}</span>
-                </div>
-          <span className={`salary-status-badge ${salaryData.salary?.status === 'paid' ? 'paid' : salaryData.salary?.status === 'approved' ? 'approved' : 'draft'}`}>
-                    Status: {salaryData.salary?.status?.toUpperCase() || 'DRAFT'}
-                  </span>
-
-      <div className="row">
-        <div className="col-md-6">
-          <div className="card">
-            <div className="card-header">
-              <h5>Salary Breakdown</h5>
-            </div>
-            <div className="card-body">
-              <div className="salary-breakdown">
-                <div className="d-flex justify-content-between">
-                  <span>Basic Salary:</span>
-                  <span>₹{salaryData.salary?.basicSalary?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="d-flex justify-content-between">
-                  <span>House Rent Allowance:</span>
-                  <span>₹{salaryData.salary?.houseRentAllowance?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="d-flex justify-content-between">
-                  <span>Medical Allowance:</span>
-                  <span>₹{salaryData.salary?.medicalAllowance?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="d-flex justify-content-between">
-                  <span>Transport Allowance:</span>
-                  <span>₹{salaryData.salary?.transportAllowance?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="d-flex justify-content-between">
-                  <span>Special Allowance:</span>
-                  <span>₹{salaryData.salary?.specialAllowance?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="d-flex justify-content-between">
-                  <span>Bonus:</span>
-                  <span>₹{salaryData.salary?.bonus?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="d-flex justify-content-between">
-                  <span>Overtime:</span>
-                  <span>₹{salaryData.salary?.overtime?.toLocaleString() || '0'}</span>
-                </div>
-                <hr />
-                <div className="d-flex justify-content-between font-weight-bold">
-                  <span>Gross Salary:</span>
-                  <span>₹{salaryData.salary?.grossSalary?.toLocaleString() || '0'}</span>
-                </div>
+                )}
               </div>
-            </div>
-          </div>
-        </div>
-        <div className="col-md-6">
-          <div className="card">
-            <div className="card-header">
-              <h5>Deductions & Net Salary</h5>
-            </div>
-            <div className="card-body">
-              <div className="deductions-net">
-                <div className="d-flex justify-content-between text-danger">
-                  <span>Provident Fund:</span>
-                  <span>₹{salaryData.salary?.providentFund?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="d-flex justify-content-between text-danger">
-                  <span>Professional Tax:</span>
-                  <span>₹{salaryData.salary?.professionalTax?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="d-flex justify-content-between text-danger">
-                  <span>Income Tax:</span>
-                  <span>₹{salaryData.salary?.incomeTax?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="d-flex justify-content-between text-danger">
-                  <span>Other Deductions:</span>
-                  <span>₹{salaryData.salary?.otherDeductions?.toLocaleString() || '0'}</span>
-                </div>
-                <hr />
-                <div className="d-flex justify-content-between font-weight-bold text-success">
-                  <span>Net Salary:</span>
-                  <span>₹{salaryData.salary?.netSalary?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="mt-2">
-                  <span className={`badge badge-${salaryData.salary?.status === 'paid' ? 'success' : salaryData.salary?.status === 'approved' ? 'info' : 'warning'}`}>
-                    Status: {salaryData.salary?.status?.toUpperCase() || 'DRAFT'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    );
-  }
-};
-
-
-// Salary Table View Component
-const SalaryTableView = ({ salaryTableData }) => {
-  return (
-    <div className="salary-table-container">
-      <div className="salary-table-header-section">
-        <h4>💰 My Salary Table</h4>
-        <p className="salary-table-description">
-          View your salary history with date created, amount, and month details
-        </p>
-      </div>
-      
-      <div className="salary-table-wrapper">
-        <div className="simple-salary-table">
-          <div className="simple-table-header">
-            <div className="simple-table-cell header-date">
-              <i className="fas fa-calendar-alt"></i>
-              <span>Date Created</span>
-            </div>
-            <div className="simple-table-cell header-amount">
-              <i className="fas fa-rupee-sign"></i>
-              <span>Amount</span>
-            </div>
-            <div className="simple-table-cell header-month">
-              <i className="fas fa-calendar-check"></i>
-              <span>Month</span>
-            </div>
-          </div>
-          
-          {salaryTableData && salaryTableData.length > 0 ? (
-            <div className="table-body">
-              {salaryTableData.map((row, index) => (
-                <div key={index} className="simple-table-row">
-                  <div className="simple-table-cell data-cell">
-                    <span className="cell-label">Date:</span>
-                    <span className="cell-value">{row.dateCreated}</span>
-                  </div>
-                  <div className="simple-table-cell data-cell amount-cell">
-                    <span className="cell-label">Amount:</span>
-                    <span className="cell-value amount-value">₹{row.amount.toLocaleString()}</span>
-                  </div>
-                  <div className="simple-table-cell data-cell">
-                    <span className="cell-label">Month:</span>
-                    <span className="cell-value month-value">{row.month}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="no-salary-data">
-              <div className="no-data-message-table">
-                <div className="no-data-icon">
-                  <i className="fas fa-inbox"></i>
-                </div>
-                <h5>No Salary Data Available</h5>
-                <p>Salary information will be updated by the manager.</p>
-                <p>Please contact HR or your manager for salary details.</p>
-                <div className="contact-info">
-                  <button className="contact-btn">
-                    <i className="fas fa-phone"></i>
-                    Contact HR
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Unified Salary History View
-const UnifiedSalaryHistoryView = ({ history, salaryType }) => {
-  return (
-    <div className="history-container">
-      <h4>📋 Salary History ({salaryType === 'daily' ? 'Daily Wage' : 'Monthly Salary'})</h4>
-      <div className="table-responsive">
-        <table className="salary-history-table">
-
-// Unified Salary History View
-const UnifiedSalaryHistoryView = ({ history, salaryType }) => {
-  return (
-    <div>
-      <h4>Salary History ({salaryType === 'daily' ? 'Daily Wage' : 'Monthly Salary'})</h4>
-      <div className="table-responsive">
-        <table className="table table-striped">
-
-          <thead>
-            <tr>
-              <th>Period</th>
-              <th>Type</th>
-              <th>Working Days</th>
-              <th>Gross Amount</th>
-              <th>Net Amount</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-
-            {history.map((record) => (
-              <tr key={record._id}>
-
-            {history.map((record, index) => (
-              <tr key={record._id || `history-${record.month}-${record.year}-${index}`}>
-
-                <td>
-                  {salaryType === 'daily'
-                    ? `${record.month}/${record.year}`
-                    : new Date(record.year, record.month - 1).toLocaleString('default', {
-                        month: 'short',
-                        year: 'numeric'
-                      })
-                  }
-                </td>
-                <td>{salaryType === 'daily' ? 'Daily Wage' : 'Monthly Salary'}</td>
-                <td>{record.workingDays || '-'}</td>
-                <td>₹{record.grossSalary?.toLocaleString() || '-'}</td>
-                <td>₹{record.netSalary?.toLocaleString() || record.pendingAmount?.toLocaleString() || '-'}</td>
-                <td>
-
-                  <span className={`table-badge ${record.status === 'paid' ? 'success' : record.status === 'approved' ? 'info' : 'warning'}`}>
-
-                  <span className={`badge badge-${record.status === 'paid' ? 'success' : record.status === 'approved' ? 'info' : 'warning'}`}>
-
-                    {record.status?.toUpperCase() || 'PENDING'}
-                  </span>
-                </td>
-                <td>
-                  {(record.status === 'paid' || record.status === 'approved') && (
-
-                    <button className="download-btn">
-
-                    <button className="btn btn-sm btn-outline-primary">
-
-                      <i className="fas fa-download"></i> Download
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {history.length === 0 && (
-              <tr>
-
-                <td colSpan={7} className="empty-history-message">
-
-                <td colSpan={7} className="text-center text-muted">
-
-                  No salary history available
-                </td>
-              </tr>
             )}
-          </tbody>
-        </table>
+
+            {activeView === 'table' && (
+              <div className="salary-table-view">
+                <h4>Salary Structure</h4>
+                {salaryTableData.length > 0 ? (
+                  <div className="table-responsive">
+                    <table className="salary-table">
+                      <thead>
+                        <tr>
+                          <th>Period</th>
+                          <th>Basic</th>
+                          <th>Allowances</th>
+                          <th>Deductions</th>
+                          <th>Net Amount</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {salaryTableData.map((item, index) => (
+                          <tr key={index}>
+                            <td>{item.period}</td>
+                            <td>₹{item.basic || 0}</td>
+                            <td>₹{item.allowances || 0}</td>
+                            <td>₹{item.deductions || 0}</td>
+                            <td>₹{item.netAmount || 0}</td>
+                            <td>
+                              <span className={`status ${item.status}`}>
+                                {item.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="no-table-data">
+                    <p>No salary table data available.</p>
+                    <p>Salary structure will be updated by management.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeView === 'history' && (
+              <div className="salary-history-view">
+                <h4>Salary History</h4>
+                {history.length > 0 ? (
+                  <div className="history-list">
+                    {history.map((item, index) => (
+                      <div key={index} className="history-item">
+                        <div className="history-header">
+                          <span className="period">
+                            {item.month}/{item.year}
+                          </span>
+                          <span className={`status ${item.status}`}>
+                            {item.status}
+                          </span>
+                        </div>
+                        <div className="history-details">
+                          <div className="detail-item">
+                            <label>Basic:</label>
+                            <span>₹{item.basicSalary || 0}</span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Gross:</label>
+                            <span>₹{item.grossSalary || 0}</span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Net:</label>
+                            <span>₹{item.netSalary || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="no-history-data">
+                    <p>No salary history available.</p>
+                    <p>History will appear here after salary processing.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

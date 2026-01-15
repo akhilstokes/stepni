@@ -1,783 +1,512 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
-
-const iso = (d) => new Date(d).toISOString().slice(0,10);
-
-const weekStartOf = (dateStr) => {
-  const d = new Date(dateStr);
-  const day = d.getDay();
-  d.setDate(d.getDate() - day);
-  d.setHours(0,0,0,0);
-  return iso(d);
-};
+import React, { useState, useEffect } from 'react';
 
 const ManagerShifts = () => {
-  const base = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const headers = useMemo(() => (
-    token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
-  ), [token]);
-  const today = useMemo(() => iso(new Date()), []);
-  const [weekStart, setWeekStart] = useState(weekStartOf(today));
-
-  
-  // Get default shift times based on group
-  const getDefaultShiftTimes = (groupType) => {
-    switch(groupType) {
-      case 'field':
-        // Field Standard per request: Morning 09:00-17:00, Evening 18:00-22:00
-        return { morningStart: '09:00', morningEnd: '17:00', eveningStart: '18:00', eveningEnd: '22:00', what: 'collection' };
-      case 'accountant':
-        return { morningStart: '08:00', morningEnd: '17:00', eveningStart: '17:00', eveningEnd: '17:00', what: 'collection' };
-      case 'delivery':
-        return { morningStart: '08:00', morningEnd: '17:00', eveningStart: '17:00', eveningEnd: '17:00', what: 'collection' };
-      case 'lab':
-        return { morningStart: '09:00', morningEnd: '17:00', eveningStart: '17:00', eveningEnd: '17:00', what: 'collection' };
-      default:
-        return { morningStart: '09:00', morningEnd: '13:00', eveningStart: '13:30', eveningEnd: '18:00', what: 'collection' };
-    }
-  };
-  
-  const [form, setForm] = useState(getDefaultShiftTimes('field'));
-
-  const [form, setForm] = useState({ morningStart: '09:00', morningEnd: '13:00', eveningStart: '13:30', eveningEnd: '18:00', what: 'collection' });
-
-  const [assignments, setAssignments] = useState([]); // [{ staff, shiftType }]
-  const [loading, setLoading] = useState(false);
+  const [shifts, setShifts] = useState([]);
+  const [staff, setStaff] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [repeatCount, setRepeatCount] = useState(1); // weeks to repeat
-  const [conflicts, setConflicts] = useState([]);
-  const [group, setGroup] = useState('field'); // 'field' | 'delivery' | 'lab' | 'accountant' | 'company'
-  const [staffOptions, setStaffOptions] = useState([]); // [{value:_id,label:'Name (staffId/email)'}]
-  // Day override state
-  const [overrides, setOverrides] = useState([]); // [{date, staff, shiftType}]
-  const [ov, setOv] = useState({ date: '', staff: '', shiftType: 'Morning' });
-  // Inline assign state
-  const [assigningIdx, setAssigningIdx] = useState(-1);
-  const [infoMsg, setInfoMsg] = useState('');
+  const [message, setMessage] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newShift, setNewShift] = useState({
+    title: '',
+    startTime: '',
+    endTime: '',
+    date: '',
+    assignedStaff: '',
+    type: 'morning'
+  });
 
-  const [presetGroup, setPresetGroup] = useState('field');
+  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const token = localStorage.getItem('token');
 
-
-  // Helpers
-  const onlyDigits = (v) => String(v || '').replace(/\D+/g, '');
-  const noSpaces = (v) => String(v || '').replace(/\s+/g, '');
-  const isTimeLt = (a, b) => {
-    if (!a || !b) return false;
-    // a and b in HH:MM
-    const [ah, am] = a.split(':').map(Number);
-    const [bh, bm] = b.split(':').map(Number);
-    return ah * 60 + am < bh * 60 + bm;
-  };
-
-  const load = useCallback(async () => {
-    setLoading(true); setError('');
-    try {
-      const res = await fetch(`${base}/api/schedules/by-week?weekStart=${weekStart}&group=${encodeURIComponent(group)}`, { headers });
-      if (res.status === 404) { setAssignments([]); return; }
-      if (!res.ok) throw new Error(`Failed to load (${res.status})`);
-      const data = await res.json();
-      setForm({ morningStart: data.morningStart, morningEnd: data.morningEnd, eveningStart: data.eveningStart, eveningEnd: data.eveningEnd, what: data.what || 'collection' });
-      setAssignments(Array.isArray(data.assignments) ? data.assignments.map(a => ({ staff: a.staff, shiftType: a.shiftType })) : []);
-      setOverrides(Array.isArray(data.overrides) ? data.overrides : []);
-    } catch (e) { setError(e?.message || 'Failed to load'); }
-    finally { setLoading(false); }
-  }, [base, headers, weekStart, group]);
-
-  // Load schedule when week or group changes.
-  useEffect(() => { load(); }, [load]);
-
-  // Map UI group to backend user role for listing
-  const roleForGroup = (g) => {
-    switch (g) {
-      case 'field': return 'field_staff';
-      case 'delivery': return 'delivery_staff';
-      case 'lab': return 'lab_staff';
-      case 'accountant': return 'accountant';
-      case 'company': return 'staff'; // company staff
-      default: return '';
-    }
-  };
-
-  // Load staff list for selected group
   useEffect(() => {
-    const loadStaff = async () => {
-      try {
-        const role = roleForGroup(group);
-        if (!role) { setStaffOptions([]); return; }
-        const res = await fetch(`${base}/api/user-management/staff?role=${encodeURIComponent(role)}&status=active&limit=500`, { headers });
-        if (!res.ok) { setStaffOptions([]); return; }
-        const data = await res.json();
-        const users = data?.users || data?.records || [];
-        const opts = users.map(u => ({ value: u._id, label: `${u.name || u.email || u.staffId || u._id}${u.staffId ? ` (${u.staffId})` : ''}` }));
-        setStaffOptions(opts);
-      } catch (_) { setStaffOptions([]); }
-    };
-    loadStaff();
-  }, [base, headers, group]);
+    fetchData();
+  }, []);
 
-
-  // Update shift times when group changes
-  useEffect(() => {
-    const newTimes = getDefaultShiftTimes(group);
-    setForm((prev) => ({
-      ...prev,
-      ...newTimes
-    }));
-
-  // When switching to Lab group, default to a single 09:00–17:00 shift
-  useEffect(() => {
-    if (group === 'lab') {
-      setForm((prev) => ({
-        ...prev,
-        morningStart: '09:00',
-        morningEnd: '17:00',
-        // Set evening to a no-op window
-        eveningStart: '17:00',
-        eveningEnd: '17:00'
-      }));
-    }
-
-  }, [group]);
-
-  // Basic conflict detection & validation: duplicate staff or empty IDs, no spaces in IDs, time ranges, repeatCount
-  useEffect(() => {
-    const issues = [];
-    const seen = new Map();
-    assignments.forEach((a, idx) => {
-      const staff = noSpaces((a.staff || '').trim());
-      if (!staff) issues.push({ type: 'empty', message: `Row ${idx + 1}: Staff ID is required` });
-      if (staff && /\s/.test(a.staff)) {
-        issues.push({ type: 'space', message: `Row ${idx + 1}: Staff ID must not contain spaces` });
-      }
-      if (staff) {
-        const key = `${staff}`;
-        seen.set(key, (seen.get(key) || 0) + 1);
-      }
-      if (!a.shiftType || (a.shiftType !== 'Morning' && a.shiftType !== 'Evening')) {
-        issues.push({ type: 'shift', message: `Row ${idx + 1}: Invalid shift type` });
-      }
-    });
-    for (const [staff, count] of seen.entries()) {
-      if (count > 1) issues.push({ type: 'duplicate', message: `Staff ${staff} appears ${count} times` });
-    }
-    // Time validations
-    if (!isTimeLt(form.morningStart, form.morningEnd)) {
-      issues.push({ type: 'time', message: 'Morning End must be after Morning Start' });
-    }
-    if (!isTimeLt(form.eveningStart, form.eveningEnd)) {
-      issues.push({ type: 'time', message: 'Evening End must be after Evening Start' });
-    }
-    // For lab single shift, evening equals morning end/start is allowed but not required here
-    // Repeat count validation (1-12), digits only, no spaces
-    const rc = Number(onlyDigits(repeatCount));
-    if (!rc || rc < 1 || rc > 12) {
-      issues.push({ type: 'repeat', message: 'Repeat weeks must be a number between 1 and 12' });
-    }
-    setConflicts(issues);
-  }, [assignments, form, repeatCount]);
-
-  const save = async (e) => {
-    e.preventDefault();
+  const fetchData = async () => {
     try {
-      setError(''); setLoading(true);
-      if (conflicts.length) {
-        throw new Error('Please resolve conflicts before saving');
-      }
-      const upsertOne = async (ws) => {
-        const normalizedGroup = group === 'lab' ? 'lab' : 'field';
-        const body = { weekStart: ws, ...form, assignments, group: normalizedGroup };
-        const res = await fetch(`${base}/api/schedules?group=${encodeURIComponent(normalizedGroup)}`, { method: 'POST', headers, body: JSON.stringify(body) });
-        if (!res.ok) {
-          let msg = `Save failed for ${ws} (${res.status})`;
-          try { const j = await res.json(); if (j?.message) msg = j.message; } catch (_) {}
-          throw new Error(msg);
-        }
-      };
-      // Repeat for N weeks (including current)
-      const n = Math.max(1, Number(repeatCount) || 1);
-      const baseDate = new Date(weekStart);
-      for (let i = 0; i < n; i++) {
-        const d = new Date(baseDate);
-        d.setDate(d.getDate() + i * 7);
-        await upsertOne(iso(d));
-      }
-      await load();
-    } catch (e2) { setError(e2?.message || 'Save failed'); }
-    finally { setLoading(false); }
-  };
-
-
-  const applyPreset = () => {
-    const preset = getDefaultShiftTimes(presetGroup);
-    setForm(preset);
-  };
-
-
-
-  const onForm = (e) => {
-    const { name, value } = e.target;
-    // prevent spaces in time fields
-    const v = name.includes('Start') || name.includes('End') ? value.replace(/\s+/g, '') : value;
-    setForm((s) => ({ ...s, [name]: v }));
-  };
-
-  const addAssignment = () => setAssignments((s) => [...s, { staff: '', shiftType: 'Morning' }]);
-
-  const setAssignment = (i, key, value) => {
-    if (key === 'staff' && value === '__SELECT_ALL__') {
-      // Handle "Select All Staff" option
-      const newAssignments = staffOptions.map(opt => ({ 
-        staff: opt.value, 
-        shiftType: assignments[i]?.shiftType || 'Morning' 
-      }));
-      setAssignments((s) => {
-        const updated = [...s];
-        updated[i] = newAssignments[0];
-        return [...updated, ...newAssignments.slice(1)];
-      });
-      return;
-    }
-    setAssignments((s) => s.map((it, idx) => idx === i ? { ...it, [key]: key === 'staff' ? noSpaces(value) : value } : it));
-  };
-  const removeAssignment = (i) => setAssignments((s) => s.filter((_, idx) => idx !== i));
-
-  // Bulk add all staff to a shift
-  const addAllStaffToShift = (shiftType) => {
-    if (staffOptions.length === 0) {
-      setError('No staff members available. Please select a Target Group first.');
-      return;
-    }
-    const existingStaffIds = new Set(assignments.map(a => a.staff).filter(Boolean));
-    const newAssignments = staffOptions
-      .filter(opt => !existingStaffIds.has(opt.value))
-      .map(opt => ({ staff: opt.value, shiftType }));
-    if (newAssignments.length > 0) {
-      setAssignments((s) => [...s, ...newAssignments]);
-      setInfoMsg(`✓ Added ${newAssignments.length} staff member(s) to ${shiftType} shift.`);
-      setTimeout(() => setInfoMsg(''), 5000);
-    } else {
-      setInfoMsg('All staff members are already assigned. Remove some to add others.');
-      setTimeout(() => setInfoMsg(''), 5000);
-    }
-  };
-
-
-  const setAssignment = (i, key, value) => setAssignments((s) => s.map((it, idx) => idx === i ? { ...it, [key]: key === 'staff' ? noSpaces(value) : value } : it));
-  const removeAssignment = (i) => setAssignments((s) => s.filter((_, idx) => idx !== i));
-
-
-  const assignNow = async (i) => {
-    try {
-      setInfoMsg('');
-      const row = assignments[i];
-      if (!row || !row.staff) { setError('Select a staff before assigning'); return; }
-      if (!row.shiftType || (row.shiftType !== 'Morning' && row.shiftType !== 'Evening')) { setError('Select a valid shift'); return; }
-      // basic time validation
-      if (!isTimeLt(form.morningStart, form.morningEnd)) { setError('Morning time range invalid'); return; }
-      if (!isTimeLt(form.eveningStart, form.eveningEnd)) { setError('Evening time range invalid'); return; }
-      const timeWindow = row.shiftType === 'Morning' ? `${form.morningStart} - ${form.morningEnd}` : `${form.eveningStart} - ${form.eveningEnd}`;
-      const label = staffOptions.find(o=>o.value===row.staff)?.label || row.staff;
-      if (!window.confirm(`Assign ${label} to ${row.shiftType} (${timeWindow}) for week starting ${weekStart}?`)) return;
-      setAssigningIdx(i);
-      const normalizedGroup = group === 'lab' ? 'lab' : 'field';
-      const body = { weekStart, ...form, assignments: [{ staff: row.staff, shiftType: row.shiftType }], group: normalizedGroup };
-      const res = await fetch(`${base}/api/schedules?group=${encodeURIComponent(normalizedGroup)}`, { method: 'POST', headers, body: JSON.stringify(body) });
-      if (!res.ok) {
-        let msg = `Assign failed (${res.status})`;
-        try { const j = await res.json(); if (j?.message) msg = j.message; } catch (_) {}
-        throw new Error(msg);
-      }
-      setInfoMsg(`Assigned ${label} to ${row.shiftType} (${timeWindow}) successfully.`);
-      await load();
-    } catch (e) {
-      setError(e?.message || 'Assign failed');
-    } finally {
-      setAssigningIdx(-1);
-    }
-  };
-
-  // Helpers for override date boundaries (must be in the current week)
-  const weekStartDate = useMemo(() => new Date(weekStart), [weekStart]);
-  const weekEndDate = useMemo(() => { const d = new Date(weekStart); d.setDate(d.getDate()+6); return d; }, [weekStart]);
-  const clampToWeek = (val) => {
-    const d = new Date(val);
-    if (Number.isNaN(d.getTime())) return '';
-    const start = new Date(weekStartDate); const end = new Date(weekEndDate);
-    if (d < start) return iso(start);
-    if (d > end) return iso(end);
-    return iso(d);
-  };
-
-  const addDayOverride = async () => {
-    try {
+      setLoading(true);
       setError('');
-      if (!ov.date || !ov.staff) throw new Error('Select date and staff');
-      const body = { weekStart, group, date: ov.date, staff: ov.staff, shiftType: ov.shiftType };
-      const res = await fetch(`${base}/api/schedules/overrides`, { method: 'POST', headers, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error(`Failed to add override (${res.status})`);
-      const data = await res.json();
-      setOverrides(Array.isArray(data?.overrides) ? data.overrides : []);
-      // keep inputs for quick repeats
-    } catch (e) { setError(e?.message || 'Failed to add override'); }
+
+      const [shiftsRes, staffRes] = await Promise.all([
+        fetch(`${API_BASE}/api/shifts`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch(`${API_BASE}/api/user-management/staff`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+
+      if (shiftsRes.ok) {
+        const shiftsData = await shiftsRes.json();
+        setShifts(Array.isArray(shiftsData) ? shiftsData : []);
+      }
+
+      if (staffRes.ok) {
+        const staffData = await staffRes.json();
+        setStaff(Array.isArray(staffData) ? staffData : []);
+      }
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const removeDayOverride = async (o) => {
+  const handleCreateShift = async (e) => {
+    e.preventDefault();
+    
+    if (!newShift.title || !newShift.startTime || !newShift.endTime || !newShift.date) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
     try {
-      const body = { weekStart, group, date: o.date, staff: o.staff };
-      const res = await fetch(`${base}/api/schedules/overrides`, { method: 'DELETE', headers, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error(`Failed to remove override (${res.status})`);
-      const data = await res.json();
-      setOverrides(Array.isArray(data?.overrides) ? data.overrides : overrides.filter(x => !(String(x.staff)===String(o.staff) && iso(x.date)===iso(o.date))));
-    } catch (e) { setError(e?.message || 'Failed to remove override'); }
+      const response = await fetch(`${API_BASE}/api/shifts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(newShift)
+      });
+
+      if (response.ok) {
+        setMessage('Shift created successfully');
+        setShowCreateForm(false);
+        setNewShift({
+          title: '',
+          startTime: '',
+          endTime: '',
+          date: '',
+          assignedStaff: '',
+          type: 'morning'
+        });
+        await fetchData();
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.message || 'Failed to create shift');
+      }
+    } catch (err) {
+      console.error('Error creating shift:', err);
+      setError('Failed to create shift');
+    }
   };
 
+  const handleDeleteShift = async (shiftId) => {
+    if (!window.confirm('Are you sure you want to delete this shift?')) {
+      return;
+    }
 
-  const preventInvalidNumberKey = (e) => {
-    const invalid = ['e','E','+','-','.',',',' '];
-    if (invalid.includes(e.key)) e.preventDefault();
+    try {
+      const response = await fetch(`${API_BASE}/api/shifts/${shiftId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        setMessage('Shift deleted successfully');
+        await fetchData();
+      } else {
+        setError('Failed to delete shift');
+      }
+    } catch (err) {
+      console.error('Error deleting shift:', err);
+      setError('Failed to delete shift');
+    }
   };
 
+  const formatTime = (timeString) => {
+    if (!timeString) return '-';
+    try {
+      return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return timeString;
+    }
+  };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
+  };
 
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12 }}>
-        <h2 style={{ margin: 0 }}>Shift Planning</h2>
-        <div style={{ display:'flex', gap:12, flexWrap:'wrap', alignItems:'center' }}>
-          <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-            <span>Week of</span>
-            <input type="date" value={weekStart} onChange={(e)=>setWeekStart(weekStartOf(e.target.value))} style={{ width:'100%' }} />
-          </label>
-          <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-            <span>Target Group</span>
-            <select value={group} onChange={(e)=>setGroup(e.target.value)}>
-              <option value="field">Field Staff</option>
-              <option value="delivery">Delivery Staff</option>
-              <option value="lab">Lab Staff</option>
-              <option value="accountant">Accountant</option>
-              <option value="company">Company Staff</option>
-            </select>
-          </label>
-        </div>
+    <div style={{ padding: 20 }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 'bold', color: '#1f2937', marginBottom: 8 }}>
+          Shift Planning
+        </h1>
+        <p style={{ color: '#6b7280', fontSize: 16 }}>
+          Plan and manage staff shifts
+        </p>
       </div>
-      {error && <div style={{ color: 'tomato', marginTop: 8 }}>{error}</div>}
 
-      <form onSubmit={save} style={{ display:'grid', gap:12, marginTop: 12 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, alignItems:'end' }}>
-          <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-            <span>Morning Start</span>
-            <input type="time" name="morningStart" value={form.morningStart} onChange={onForm} required style={{ width:'100%' }} />
-          </label>
-          <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-            <span>Morning End</span>
-            <input type="time" name="morningEnd" value={form.morningEnd} onChange={onForm} required style={{ width:'100%' }} />
-          </label>
-          <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-            <span>Evening Start</span>
-            <input type="time" name="eveningStart" value={form.eveningStart} onChange={onForm} required style={{ width:'100%' }} />
-          </label>
-          <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-            <span>Evening End</span>
-            <input type="time" name="eveningEnd" value={form.eveningEnd} onChange={onForm} required style={{ width:'100%' }} />
-          </label>
-          <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-            <span>Repeat weeks</span>
-            <select value={repeatCount} onChange={(e)=> setRepeatCount(onlyDigits(e.target.value))} style={{ width:'100%' }}>
-              {[1,2,3,4,6,8,12].map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </label>
-          <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-            <span>Task</span>
-            <select name="what" value={form.what} onChange={onForm}>
-
-
-              <option value="collection">Collection</option>
-
-              <option value="empty_barrel_pickup">Empty Barrel Pickup</option>
-              <option value="production_support">Production Support</option>
-              <option value="rubber_band_packing">Rubber Band Packing</option>
-              <option value="admin_back_office">Admin / Back Office</option>
-            </select>
-          </label>
-
-          <div style={{ display:'flex', alignItems:'flex-end', gap:8 }}>
-            <button type="button" className="btn btn-outline" onClick={() => setForm(getDefaultShiftTimes(group))}>
-              Reset to {group.charAt(0).toUpperCase() + group.slice(1)} Standard
-            </button>
-            <select value={presetGroup} onChange={(e)=>setPresetGroup(e.target.value)} style={{ fontSize:14 }}>
-              <option value="field">Field Standard</option>
-              <option value="delivery">Delivery Standard</option>
-              <option value="lab">Lab Standard</option>
-              <option value="accountant">Accountant Standard</option>
-              <option value="company">Company Standard</option>
-            </select>
-            <button type="button" className="btn btn-primary" onClick={applyPreset}>
-              Apply Preset
-            </button>
-          </div>
+      {error && (
+        <div style={{
+          padding: 12,
+          backgroundColor: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: 6,
+          color: '#dc2626',
+          marginBottom: 16
+        }}>
+          {error}
         </div>
+      )}
 
-        <div>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12, marginBottom:12 }}>
-            <div>
-              <h3 style={{ margin: 0 }}>Assignments ({assignments.length})</h3>
-              {staffOptions.length > 0 && (
-                <div style={{ fontSize:12, color:'#64748b', marginTop:4 }}>
-                  {staffOptions.length} staff member(s) available for {group.charAt(0).toUpperCase() + group.slice(1)} group
+      {message && (
+        <div style={{
+          padding: 12,
+          backgroundColor: '#f0fdf4',
+          border: '1px solid #bbf7d0',
+          borderRadius: 6,
+          color: '#16a34a',
+          marginBottom: 16
+        }}>
+          {message}
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div style={{ marginBottom: 24, display: 'flex', gap: 12 }}>
+        <button
+          onClick={() => setShowCreateForm(true)}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#3b82f6',
+            color: 'white',
+            border: 'none',
+            borderRadius: 6,
+            fontSize: 14,
+            cursor: 'pointer'
+          }}
+        >
+          Create New Shift
+        </button>
+        <button
+          onClick={fetchData}
+          disabled={loading}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#f3f4f6',
+            color: '#374151',
+            border: '1px solid #d1d5db',
+            borderRadius: 6,
+            fontSize: 14,
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.6 : 1
+          }}
+        >
+          Refresh
+        </button>
+      </div>
+
+      {/* Create Shift Form */}
+      {showCreateForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: 8,
+            padding: 24,
+            maxWidth: 500,
+            width: '90%',
+            maxHeight: '90%',
+            overflow: 'auto'
+          }}>
+            <h3 style={{ marginBottom: 20, fontSize: 20, fontWeight: 600 }}>
+              Create New Shift
+            </h3>
+            
+            <form onSubmit={handleCreateShift}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                  Shift Title *
+                </label>
+                <input
+                  type="text"
+                  value={newShift.title}
+                  onChange={(e) => setNewShift(prev => ({ ...prev, title: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: 6,
+                    fontSize: 14
+                  }}
+                  placeholder="e.g., Morning Collection Shift"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                    Start Time *
+                  </label>
+                  <input
+                    type="time"
+                    value={newShift.startTime}
+                    onChange={(e) => setNewShift(prev => ({ ...prev, startTime: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: 6,
+                      fontSize: 14
+                    }}
+                  />
                 </div>
-              )}
-            </div>
-            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-              <button type="button" className="btn btn-outline" onClick={() => addAllStaffToShift('Morning')} disabled={staffOptions.length === 0}>
-                ✓ Add All to Morning ({staffOptions.length})
-              </button>
-              <button type="button" className="btn btn-outline" onClick={() => addAllStaffToShift('Evening')} disabled={staffOptions.length === 0}>
-                ✓ Add All to Evening ({staffOptions.length})
-              </button>
-              <button type="button" className="btn" onClick={addAssignment}>+ Add Single</button>
-            </div>
-          </div>
-          <div style={{ marginTop: 8, overflowX:'auto' }}>
-            <table className="dashboard-table" style={{ minWidth: 680 }}>
-              <thead>
-                <tr>
-                  <th style={{ width: 50 }}>#</th>
-                  <th>Staff Member</th>
-                  <th>Shift Type</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-          {group === 'lab' && (
-            <div style={{ display:'flex', alignItems:'flex-end' }}>
-              <button type="button" className="btn btn-outline" onClick={() => setForm({ morningStart:'09:00', morningEnd:'17:00', eveningStart:'17:00', eveningEnd:'17:00' })}>
-                Apply Lab Standard (09:00–17:00)
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <h3 style={{ margin: 0 }}>Assignments</h3>
-            <button type="button" className="btn" onClick={addAssignment}>Add</button>
-          </div>
-          <div style={{ marginTop: 8, overflowX:'auto' }}>
-            <table className="dashboard-table" style={{ minWidth: 680 }}>
-              <thead><tr><th>#</th><th>Staff ID</th><th>Shift</th><th>Actions</th></tr></thead>
-
-              <tbody>
-                {assignments.map((a, i) => (
-                  <tr key={i}>
-                    <td>{i+1}</td>
-
-                    <td style={{ minWidth: 200 }}>
-                      {staffOptions.length > 0 ? (
-                        <div>
-                          <select 
-                            value={a.staff} 
-                            onChange={(e)=> setAssignment(i,'staff', e.target.value)}
-                            style={{ width:'100%', padding:'8px 12px', borderRadius:6, border:'1px solid #d1d5db' }}
-                          >
-                            <option value="">Select staff...</option>
-                            {staffOptions.length > 1 && (
-                              <option value="__SELECT_ALL__" style={{ fontWeight:'bold', color:'#059669', backgroundColor:'#f0fdf4' }}>
-                                ✓ Select All Staff ({staffOptions.length})
-                              </option>
-                            )}
-                            {staffOptions.map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                          </select>
-                          {/* Selected staff display */}
-                          {!!a.staff && a.staff !== '__SELECT_ALL__' && (
-                            <div style={{ fontSize:12, color:'#059669', marginTop:6, fontWeight:500 }}>
-                              ✓ {staffOptions.find(o=>o.value===a.staff)?.label || a.staff}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div>
-                          <input
-                            type="text"
-                            placeholder="User ObjectId or Staff ID (no spaces)"
-                            value={a.staff}
-                            onChange={(e)=>setAssignment(i,'staff', e.target.value)}
-                            onKeyDown={(e)=>{ if (e.key === ' ') e.preventDefault(); }}
-                            style={{ width:'100%', padding:'8px 12px', borderRadius:6, border:'1px solid #d1d5db' }}
-                          />
-                          {!!a.staff && (
-                            <div style={{ fontSize:12, color:'#64748b', marginTop:4 }}>
-                              {staffOptions.find(o=>o.value===a.staff)?.label || a.staff}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td style={{ minWidth: 180 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-                        <select 
-                          value={a.shiftType} 
-                          onChange={(e)=>setAssignment(i,'shiftType', e.target.value)}
-                          style={{ padding:'8px 12px', borderRadius:6, border:'1px solid #d1d5db', minWidth:120 }}
-                        >
-                          <option>Morning</option>
-                          <option>Evening</option>
-                        </select>
-                        <span style={{ fontSize:12, color:'#64748b', whiteSpace:'nowrap' }}>
-
-                    <td>
-                      {staffOptions.length > 0 ? (
-                        <select value={a.staff} onChange={(e)=> setAssignment(i,'staff', e.target.value)}>
-                          <option value="">Select staff</option>
-                          {staffOptions.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="text"
-                          placeholder="User ObjectId or Staff ID (no spaces)"
-                          value={a.staff}
-                          onChange={(e)=>setAssignment(i,'staff', e.target.value)}
-                          onKeyDown={(e)=>{ if (e.key === ' ') e.preventDefault(); }}
-                        />
-                      )}
-                      {/* Selected staff display */}
-                      {!!a.staff && (
-                        <div style={{ fontSize:12, color:'#64748b', marginTop:4 }}>
-                          {staffOptions.find(o=>o.value===a.staff)?.label || a.staff}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                        <select value={a.shiftType} onChange={(e)=>setAssignment(i,'shiftType', e.target.value)}>
-                          <option>Morning</option>
-                          <option>Evening</option>
-                        </select>
-                        <span style={{ fontSize:12, color:'#64748b' }}>
-
-                          {a.shiftType === 'Evening' ? `${form.eveningStart} - ${form.eveningEnd}` : `${form.morningStart} - ${form.morningEnd}`}
-                        </span>
-                      </div>
-                    </td>
-
-                    <td style={{ minWidth: 150 }}>
-                      <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                        <button 
-                          type="button" 
-                          className="btn btn-primary" 
-                          disabled={assigningIdx===i || loading || !a.staff || a.staff === '__SELECT_ALL__'} 
-                          onClick={()=>assignNow(i)}
-                          style={{ fontSize:13 }}
-                        >
-                          {assigningIdx===i ? '⏳ Assigning...' : '✓ Assign Now'}
-                        </button>
-                        <button 
-                          type="button" 
-                          className="btn btn-outline" 
-                          onClick={()=>removeAssignment(i)}
-                          style={{ fontSize:13 }}
-                        >
-                          ✕ Remove
-                        </button>
-
-                    <td>
-                      <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                        <button type="button" className="btn btn-primary" disabled={assigningIdx===i || loading} onClick={()=>assignNow(i)}>
-                          {assigningIdx===i ? 'Assigning...' : 'Assign Now'}
-                        </button>
-                        <button type="button" className="btn btn-outline" onClick={()=>removeAssignment(i)}>Remove</button>
-
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {assignments.length === 0 && (
-
-                  <tr>
-                    <td colSpan={4} style={{ textAlign:'center', color:'#9ca3af', padding:'32px', fontSize:14 }}>
-                      <div>No assignments yet</div>
-                      <div style={{ marginTop:8, fontSize:12, color:'#64748b' }}>
-                        Click "Add Single" to add one staff member, or use "Add All to Morning/Evening" for bulk assignment
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            {infoMsg && (
-              <div className="alert success" style={{ 
-                marginTop:12, 
-                padding:12, 
-                backgroundColor:'#d1fae5', 
-                color:'#065f46', 
-                border:'1px solid #6ee7b7', 
-                borderRadius:6,
-                display:'flex',
-                alignItems:'center',
-                gap:8
-              }}>
-                <span>✓</span>
-                <span>{infoMsg}</span>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                    End Time *
+                  </label>
+                  <input
+                    type="time"
+                    value={newShift.endTime}
+                    onChange={(e) => setNewShift(prev => ({ ...prev, endTime: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: 6,
+                      fontSize: 14
+                    }}
+                  />
+                </div>
               </div>
-            )}
 
-                  <tr><td colSpan={4} style={{ textAlign:'center', color:'#9aa' }}>No assignments</td></tr>
-                )}
-              </tbody>
-            </table>
-            {infoMsg && <div className="alert success" style={{ marginTop:8 }}>{infoMsg}</div>}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  value={newShift.date}
+                  onChange={(e) => setNewShift(prev => ({ ...prev, date: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: 6,
+                    fontSize: 14
+                  }}
+                />
+              </div>
 
-            {conflicts.length > 0 && (
-              <div style={{ marginTop: 8, color: '#b45309', background:'#fff7ed', border:'1px solid #fed7aa', padding:8, borderRadius:6 }}>
-                <b>Conflicts detected</b>
-                <ul style={{ margin: '6px 0 0 16px' }}>
-                  {conflicts.map((c, idx) => (
-                    <li key={idx}>{c.message}</li>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                  Assign Staff
+                </label>
+                <select
+                  value={newShift.assignedStaff}
+                  onChange={(e) => setNewShift(prev => ({ ...prev, assignedStaff: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: 6,
+                    fontSize: 14
+                  }}
+                >
+                  <option value="">Select staff member (optional)</option>
+                  {staff.map(member => (
+                    <option key={member._id} value={member._id}>
+                      {member.name} ({member.role})
+                    </option>
                   ))}
-                </ul>
+                </select>
               </div>
-            )}
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                  Shift Type
+                </label>
+                <select
+                  value={newShift.type}
+                  onChange={(e) => setNewShift(prev => ({ ...prev, type: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: 6,
+                    fontSize: 14
+                  }}
+                >
+                  <option value="morning">Morning</option>
+                  <option value="afternoon">Afternoon</option>
+                  <option value="evening">Evening</option>
+                  <option value="night">Night</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateForm(false)}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    borderRadius: 6,
+                    fontSize: 14,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 6,
+                    fontSize: 14,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Create Shift
+                </button>
+              </div>
+            </form>
           </div>
         </div>
+      )}
 
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap: 12, flexWrap:'wrap' }}>
-          <div style={{ fontSize:12, color:'#64748b' }}>Tip: Save will upsert the selected week. Use "Repeat weeks" to copy this plan forward. Target Group controls whether assignments apply to Field or Lab staff.</div>
-          <button type="submit" className="btn btn-primary" disabled={loading || conflicts.length > 0}>{loading ? 'Saving...' : `Save${Number(repeatCount) > 1 ? ` +${Number(repeatCount)-1} weeks` : ''}`}</button>
-        </div>
-      </form>
-
-      {/* Simple visual weekly calendar */}
-      <div className="dash-card" style={{ marginTop: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Weekly Calendar</h3>
-        <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>Assignments repeat each day for the week.</div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="dashboard-table" style={{ minWidth: 720 }}>
-            <thead>
+      {/* Shifts Table */}
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: 8,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#f8fafc' }}>
+              <th style={{ padding: 12, textAlign: 'left', fontWeight: 600, color: '#374151' }}>
+                Shift Title
+              </th>
+              <th style={{ padding: 12, textAlign: 'left', fontWeight: 600, color: '#374151' }}>
+                Date
+              </th>
+              <th style={{ padding: 12, textAlign: 'left', fontWeight: 600, color: '#374151' }}>
+                Time
+              </th>
+              <th style={{ padding: 12, textAlign: 'left', fontWeight: 600, color: '#374151' }}>
+                Assigned Staff
+              </th>
+              <th style={{ padding: 12, textAlign: 'left', fontWeight: 600, color: '#374151' }}>
+                Type
+              </th>
+              <th style={{ padding: 12, textAlign: 'left', fontWeight: 600, color: '#374151' }}>
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
               <tr>
-                <th>Shift</th>
-                <th>Sun</th>
-                <th>Mon</th>
-                <th>Tue</th>
-                <th>Wed</th>
-                <th>Thu</th>
-                <th>Fri</th>
-                <th>Sat</th>
+                <td colSpan={6} style={{ padding: 48, textAlign: 'center' }}>
+                  <div style={{ fontSize: 16, color: '#6b7280' }}>Loading shifts...</div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {['Morning','Evening'].map((shift) => {
-                const list = assignments.filter(a => a.shiftType === shift);
-                const times = shift === 'Morning' ? `${form.morningStart} - ${form.morningEnd}` : `${form.eveningStart} - ${form.eveningEnd}`;
-                const cell = (
-                  <div>
-                    <div style={{ fontWeight:600 }}>{times}</div>
-                    <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:4 }}>
-                      {list.length ? list.map((a, idx) => {
-                        const opt = staffOptions.find(o => o.value === a.staff);
-                        const label = opt ? opt.label : a.staff;
-                        return (
-                          <span key={idx} className="badge" style={{ background:'#eef2ff', color:'#3730a3', border:'1px solid #c7d2fe' }}>{label}</span>
-                        );
-                      }) : <span style={{ color:'#9aa' }}>No assignments</span>}
-                    </div>
+            ) : shifts.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ padding: 48, textAlign: 'center' }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>📅</div>
+                  <div style={{ fontSize: 18, fontWeight: 'bold', color: '#64748b', marginBottom: 4 }}>
+                    No shifts planned
                   </div>
-                );
-                return (
-                  <tr key={shift}>
-                    <td style={{ whiteSpace:'nowrap' }}>{shift}</td>
-                    <td>{cell}</td>
-                    <td>{cell}</td>
-                    <td>{cell}</td>
-                    <td>{cell}</td>
-                    <td>{cell}</td>
-                    <td>{cell}</td>
-                    <td>{cell}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Day Overrides */}
-      <div className="dash-card" style={{ marginTop: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Day Overrides</h3>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(160px, 1fr))', gap:12 }}>
-          <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-            <span>Date</span>
-            <input type="date" value={ov.date} min={iso(weekStartDate)} max={iso(weekEndDate)} onChange={(e)=> setOv(s=>({ ...s, date: clampToWeek(e.target.value) }))} />
-          </label>
-          <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-            <span>Staff</span>
-
-            <select 
-              value={ov.staff} 
-              onChange={(e)=> setOv(s=>({ ...s, staff: e.target.value }))}
-              style={{ width:'100%', padding:'8px 12px', borderRadius:6, border:'1px solid #d1d5db' }}
-            >
-              <option value="">Select staff...</option>
-              {staffOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-
-            <select value={ov.staff} onChange={(e)=> setOv(s=>({ ...s, staff: e.target.value }))}>
-              <option value="">Select staff</option>
-              {staffOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-
-            </select>
-          </label>
-          <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-            <span>Shift</span>
-            <select value={ov.shiftType} onChange={(e)=> setOv(s=>({ ...s, shiftType: e.target.value }))}>
-              <option value="Morning">Morning</option>
-              <option value="Evening">Evening</option>
-            </select>
-          </label>
-          <div style={{ display:'flex', alignItems:'flex-end' }}>
-            <button type="button" className="btn btn-primary" onClick={addDayOverride}>Add Override</button>
-          </div>
-        </div>
-
-        <div style={{ marginTop: 12, overflowX: 'auto' }}>
-          <table className="dashboard-table" style={{ minWidth: 640 }}>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Staff</th>
-                <th>Shift</th>
-                <th>Actions</th>
+                  <div style={{ fontSize: 14, color: '#94a3b8' }}>
+                    Create your first shift to get started
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {(overrides || []).map((o, idx) => {
-                const d = iso(o.date);
-                const opt = staffOptions.find(x => x.value === (o.staff?._id || o.staff));
-                const label = opt ? opt.label : (o.staff?.name || o.staff?.email || String(o.staff));
-                return (
-                  <tr key={`${d}-${o.staff}-${idx}`}>
-                    <td>{d}</td>
-                    <td>{label}</td>
-                    <td>{o.shiftType}</td>
-                    <td><button className="btn btn-outline" onClick={()=> removeDayOverride(o)}>Remove</button></td>
-                  </tr>
-                );
-              })}
-              {(!overrides || overrides.length===0) && (
-                <tr><td colSpan={4} style={{ textAlign:'center', color:'#9aa' }}>No overrides</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            ) : (
+              shifts.map((shift, index) => (
+                <tr key={shift._id || index} style={{ borderTop: index > 0 ? '1px solid #e5e7eb' : 'none' }}>
+                  <td style={{ padding: 12 }}>
+                    <div style={{ fontWeight: 500, color: '#1f2937' }}>
+                      {shift.title || 'Untitled Shift'}
+                    </div>
+                  </td>
+                  <td style={{ padding: 12 }}>
+                    <div style={{ color: '#374151' }}>
+                      {formatDate(shift.date)}
+                    </div>
+                  </td>
+                  <td style={{ padding: 12 }}>
+                    <div style={{ color: '#374151' }}>
+                      {formatTime(shift.startTime)} - {formatTime(shift.endTime)}
+                    </div>
+                  </td>
+                  <td style={{ padding: 12 }}>
+                    <div style={{ color: '#374151' }}>
+                      {shift.assignedStaff?.name || 'Unassigned'}
+                    </div>
+                  </td>
+                  <td style={{ padding: 12 }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      borderRadius: 4,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      backgroundColor: '#eff6ff',
+                      color: '#2563eb',
+                      textTransform: 'capitalize'
+                    }}>
+                      {shift.type || 'Standard'}
+                    </span>
+                  </td>
+                  <td style={{ padding: 12 }}>
+                    <button
+                      onClick={() => handleDeleteShift(shift._id)}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: '#fef2f2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                        borderRadius: 4,
+                        fontSize: 12,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
-
     </div>
   );
 };
 
 export default ManagerShifts;
-
-

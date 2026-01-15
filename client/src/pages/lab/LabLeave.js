@@ -1,8 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
-
 import React, { useCallback, useEffect, useState } from 'react';
-
 import LeaveHistoryModal from '../../components/common/LeaveHistoryModal';
 
 const LabLeave = () => {
@@ -16,20 +12,12 @@ const LabLeave = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-
-
-  
-
   const minDate = new Date().toISOString().split('T')[0];
   const maxDate = new Date();
   maxDate.setFullYear(maxDate.getFullYear() + 2);
   const maxDateStr = maxDate.toISOString().split('T')[0];
 
-
-  const load = async () => {
-
   const load = useCallback(async () => {
-
     try {
       setLoading(true);
       const res = await fetch(`${base}/api/leave/my-leaves`, { headers: { Authorization: `Bearer ${token}` } });
@@ -49,15 +37,9 @@ const LabLeave = () => {
     } finally {
       setLoading(false);
     }
-
-  };
-
-  useEffect(() => { load(); }, []);
-
   }, [base, token]);
 
   useEffect(() => { load(); }, [load]);
-
 
   const validateDates = () => {
     const errors = {};
@@ -107,11 +89,7 @@ const LabLeave = () => {
         setForm({ leaveType: 'casual', dayType: 'full', startDate: '', endDate: '', reason: '' });
         await load();
       } else {
-
         const errorData = await res.json().catch(() => ({}));
-
-        const errorData = await res.json().catch(()=>({}));
-
         setError(errorData.message || 'Failed to apply leave');
       }
     } catch (err) {
@@ -130,11 +108,7 @@ const LabLeave = () => {
     <div style={{ padding: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2 style={{ margin: 0 }}>Lab Leave Management</h2>
-
         <button
-
-        <button 
-
           className="btn btn-outline-primary"
           onClick={() => setShowHistoryModal(true)}
         >
@@ -143,17 +117,10 @@ const LabLeave = () => {
       </div>
       {error && <div style={{ color: 'crimson', marginTop: 8 }}>{error}</div>}
       <form onSubmit={apply} style={{ maxWidth: 640, marginTop: 12 }}>
-
         <div className="form-row" style={{ display: 'flex', gap: 12 }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label>Leave Type</label>
             <select className="form-control" value={form.leaveType} onChange={(e) => setForm({ ...form, leaveType: e.target.value })}>
-
-        <div className="form-row" style={{ display:'flex', gap:12 }}>
-          <div className="form-group" style={{ flex:1 }}>
-            <label>Leave Type</label>
-            <select className="form-control" value={form.leaveType} onChange={(e)=>setForm({ ...form, leaveType: e.target.value })}>
-
               <option value="casual">Casual</option>
               <option value="sick">Sick</option>
               <option value="earned">Earned</option>
@@ -163,11 +130,6 @@ const LabLeave = () => {
           <div className="form-group" style={{ flex: 1 }}>
             <label>Day Type</label>
             <select className="form-control" value={form.dayType} onChange={(e) => setForm({ ...form, dayType: e.target.value })}>
-
-          <div className="form-group" style={{ flex:1 }}>
-            <label>Day Type</label>
-            <select className="form-control" value={form.dayType} onChange={(e)=>setForm({ ...form, dayType: e.target.value })}>
-
               <option value="full">Full Day</option>
               <option value="half">Half Day</option>
             </select>
@@ -179,23 +141,11 @@ const LabLeave = () => {
               onChange={(e) => {
                 const startDate = e.target.value;
                 setForm((prev) => {
-
-          <div className="form-group" style={{ flex:1 }}>
-            <label>Start Date *</label>
-            <input type="date" className="form-control" value={form.startDate} min={minDate} max={maxDateStr}
-              onChange={(e)=>{
-                const startDate = e.target.value;
-                setForm((prev)=>{
-
                   let endDate = prev.endDate;
                   if (endDate && startDate && new Date(endDate) < new Date(startDate)) endDate = startDate;
                   return { ...prev, startDate, endDate };
                 });
-
                 if (validationErrors.startDate) setValidationErrors(prev => ({ ...prev, startDate: '' }));
-
-                if (validationErrors.startDate) setValidationErrors(prev=>({ ...prev, startDate: '' }));
-
               }}
               style={{ borderColor: validationErrors.startDate ? '#dc3545' : '' }}
             />
@@ -206,12 +156,6 @@ const LabLeave = () => {
             <label>End Date *</label>
             <input type="date" className="form-control" value={form.endDate} min={form.startDate || minDate} max={maxDateStr}
               onChange={(e) => { setForm((prev) => ({ ...prev, endDate: e.target.value })); if (validationErrors.endDate) setValidationErrors(prev => ({ ...prev, endDate: '' })); }}
-
-          <div className="form-group" style={{ flex:1 }}>
-            <label>End Date *</label>
-            <input type="date" className="form-control" value={form.endDate} min={form.startDate || minDate} max={maxDateStr}
-              onChange={(e)=>{ setForm((prev)=>({ ...prev, endDate: e.target.value })); if (validationErrors.endDate) setValidationErrors(prev=>({ ...prev, endDate: '' })); }}
-
               style={{ borderColor: validationErrors.endDate ? '#dc3545' : '' }}
             />
             {validationErrors.endDate && <div style={{ color: '#dc3545', fontSize: 12 }}>{validationErrors.endDate}</div>}
@@ -219,11 +163,7 @@ const LabLeave = () => {
         </div>
         <div className="form-group">
           <label>Reason</label>
-
           <textarea className="form-control" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
-
-          <textarea className="form-control" value={form.reason} onChange={(e)=>setForm({ ...form, reason: e.target.value })} />
-
         </div>
         <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? 'Submitting...' : 'Apply'}</button>
       </form>
@@ -254,11 +194,7 @@ const LabLeave = () => {
                   <td>{l.status}</td>
                   <td>
                     {l.status === 'pending' && (
-
                       <button className="btn btn-sm btn-outline-danger" onClick={() => cancel(l._id)}>Cancel</button>
-
-                      <button className="btn btn-sm btn-outline-danger" onClick={()=>cancel(l._id)}>Cancel</button>
-
                     )}
                   </td>
                 </tr>
@@ -270,15 +206,9 @@ const LabLeave = () => {
       </div>
 
       {/* Leave History Modal */}
-
       <LeaveHistoryModal
         isOpen={showHistoryModal}
         onClose={() => setShowHistoryModal(false)}
-
-      <LeaveHistoryModal 
-        isOpen={showHistoryModal} 
-        onClose={() => setShowHistoryModal(false)} 
-
       />
     </div>
   );

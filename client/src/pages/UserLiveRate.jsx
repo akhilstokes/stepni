@@ -2,9 +2,11 @@
 import React, { useEffect, useState } from 'react';
 import { getHistory, exportCsv, exportPdf } from '../services/dailyRateService';
 import { getPublishedLatest } from '../services/rateService';
+import { useAuth } from '../context/AuthContext';
 import './UserLiveRate.css';
 
 export default function UserLiveRate() {
+  const { token } = useAuth();
   const category = 'LATEX60';
   const [rate, setRate] = useState(null);
   const [history, setHistory] = useState([]);
@@ -49,11 +51,16 @@ export default function UserLiveRate() {
     setLoadingLatest(true);
     getPublishedLatest('latex60')
       .then((data) => setRate(data))
-      .catch(() => setRate(null))
+      .catch((error) => {
+        console.error('Error loading latest rate:', error);
+        setRate(null);
+      })
       .finally(() => setLoadingLatest(false));
   };
 
   useEffect(() => {
+    if (!token) return; // Don't load data if not authenticated
+    
     reloadLatest();
     reloadHistory();
     // Auto-refresh every 60s
@@ -63,13 +70,16 @@ export default function UserLiveRate() {
     }, 60000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token]);
 
   const reloadHistory = () => {
     setLoadingHist(true);
-    getHistory({ category, limit: 50, from, to })
+    getHistory({ category, limit: 50, from, to }, token)
       .then(({ data }) => setHistory(Array.isArray(data) ? data : data?.rows || []))
-      .catch(() => setHistory([]))
+      .catch((error) => {
+        console.error('Error loading history:', error);
+        setHistory([]);
+      })
       .finally(() => setLoadingHist(false));
   };
 
@@ -82,18 +92,24 @@ export default function UserLiveRate() {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleExportCsv = async () => {
+  const handleExportCsv = async (e) => {
+    e.preventDefault();
     try {
-      const blob = (await exportCsv({ category, from, to })).data;
+      const blob = (await exportCsv({ category, from, to }, token)).data;
       saveBlob(blob, `latex60-rate-history.csv`);
-    } catch (_) { /* ignore */ }
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+    }
   };
 
-  const handleExportPdf = async () => {
+  const handleExportPdf = async (e) => {
+    e.preventDefault();
     try {
-      const blob = (await exportPdf({ category, from, to })).data;
+      const blob = (await exportPdf({ category, from, to }, token)).data;
       saveBlob(blob, `latex60-rate-history.pdf`);
-    } catch (_) { /* ignore */ }
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+    }
   };
 
   return (
@@ -106,7 +122,7 @@ export default function UserLiveRate() {
               Last updated: {rate.effectiveDate ? new Date(rate.effectiveDate).toLocaleString('en-IN') : '—'}
             </span>
           )}
-          <button className="btn-secondary" onClick={() => { reloadLatest(); reloadHistory(); }} disabled={loadingLatest || loadingHist}>
+          <button type="button" className="btn-secondary" onClick={() => { reloadLatest(); reloadHistory(); }} disabled={loadingLatest || loadingHist}>
             {loadingLatest || loadingHist ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>
@@ -119,7 +135,7 @@ export default function UserLiveRate() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
-              <span style={{ color: '#334155', fontWeight: 600 }}>Effectve Price Calculator (DRC %)</span>
+              <span style={{ color: '#334155', fontWeight: 600 }}>Effective Price Calculator (DRC %)</span>
             </label>
           </div>
 
@@ -211,11 +227,11 @@ export default function UserLiveRate() {
                 }}
               />
             </label>
-            <button className="btn" onClick={reloadHistory} disabled={loadingHist}>
+            <button type="button" className="btn" onClick={(e) => { e.preventDefault(); reloadHistory(); }} disabled={loadingHist}>
               {loadingHist ? 'Loading...' : 'Filter'}
             </button>
-            <button className="btn-secondary" onClick={handleExportCsv}>Export CSV</button>
-            <button className="btn-secondary" onClick={handleExportPdf}>Export PDF</button>
+            <button type="button" className="btn-secondary" onClick={handleExportCsv}>Export CSV</button>
+            <button type="button" className="btn-secondary" onClick={handleExportPdf}>Export PDF</button>
           </div>
         </div>
         {loadingHist ? (

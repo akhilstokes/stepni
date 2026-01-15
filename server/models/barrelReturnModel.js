@@ -24,6 +24,13 @@ const barrelReturnSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  condition: {
+    type: String,
+    enum: ['excellent', 'good', 'fair', 'poor', 'damaged']
+  },
+  returnReason: {
+    type: String
+  },
   status: {
     type: String,
     enum: ['returned', 'reassigned', 'completed'],

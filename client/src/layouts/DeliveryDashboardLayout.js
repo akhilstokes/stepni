@@ -80,43 +80,45 @@ const DeliveryDashboardLayout = ({ children }) => {
 
   const getPageTitle = () => {
     const path = location.pathname;
-    if (path === '/delivery') return { title: 'Dashboard', subtitle: 'Overview of your delivery activities', icon: 'fa-tachometer-alt' };
-    if (path.includes('/route-plan')) return { title: 'Route Plan', subtitle: 'Plan your delivery routes', icon: 'fa-route' };
+    if (path === '/delivery') return { title: 'Dashboard', subtitle: 'Overview of your delivery activities', icon: 'fa-home' };
+    if (path.includes('/route-plan')) return { title: 'Route Plan', subtitle: 'Plan your delivery routes', icon: 'fa-map' };
     if (path.includes('/tasks')) return { title: 'My Tasks', subtitle: 'View and manage your tasks', icon: 'fa-tasks' };
-    if (path.includes('/assigned-requests')) return { title: 'Assigned Requests', subtitle: 'Handle assigned delivery requests', icon: 'fa-clipboard-list' };
+    if (path.includes('/assigned-requests')) return { title: 'Assigned Requests', subtitle: 'Handle assigned delivery requests', icon: 'fa-list' };
     if (path.includes('/task-history')) return { title: 'Task History', subtitle: 'View completed tasks', icon: 'fa-history' };
-    if (path.includes('/shift-schedule')) return { title: 'My Schedule', subtitle: 'View your work schedule', icon: 'fa-calendar-alt' };
-    if (path.includes('/barrel-intake')) return { title: 'Barrel Intake', subtitle: 'Manage barrel intake process', icon: 'fa-box-open' };
+    if (path.includes('/shift-schedule')) return { title: 'My Schedule', subtitle: 'View your work schedule', icon: 'fa-calendar' };
+    if (path.includes('/barrel-intake')) return { title: 'Barrel Intake', subtitle: 'Manage barrel intake process', icon: 'fa-box' };
     if (path.includes('/leave')) return { title: 'Leave Management', subtitle: 'Apply and manage leave', icon: 'fa-calendar-times' };
-    if (path.includes('/salary')) return { title: 'My Salary', subtitle: 'View salary information', icon: 'fa-money-bill-wave' };
+    if (path.includes('/salary')) return { title: 'My Salary', subtitle: 'View salary information', icon: 'fa-money-bill' };
     return { title: 'Delivery', subtitle: 'Delivery management system', icon: 'fa-truck' };
   };
 
   const pageInfo = getPageTitle();
 
+  const notificationCount = Number(quickStats?.pending) || 0;
+
   const navigationItems = [
     {
       section: 'Main',
       items: [
-        { to: '/delivery', icon: 'fa-tachometer-alt', label: 'Dashboard' },
-        { to: '/delivery/route-plan', icon: 'fa-route', label: 'Route Plan' },
+        { to: '/delivery', icon: 'fa-home', label: 'Dashboard' },
+        { to: '/delivery/route-plan', icon: 'fa-map', label: 'Route Plan' },
         { to: '/delivery/tasks', icon: 'fa-tasks', label: 'My Tasks' },
       ]
     },
     {
       section: 'Operations',
       items: [
-        { to: '/delivery/assigned-requests', icon: 'fa-clipboard-list', label: 'Assigned Requests' },
-        { to: '/delivery/barrel-intake', icon: 'fa-box-open', label: 'Barrel Intake' },
+        { to: '/delivery/assigned-requests', icon: 'fa-list', label: 'Assigned Requests' },
+        { to: '/delivery/barrel-intake', icon: 'fa-box', label: 'Barrel Intake' },
         { to: '/delivery/task-history', icon: 'fa-history', label: 'Task History' },
       ]
     },
     {
       section: 'Personal',
       items: [
-        { to: '/delivery/shift-schedule', icon: 'fa-calendar-alt', label: 'My Schedule' },
+        { to: '/delivery/shift-schedule', icon: 'fa-calendar', label: 'My Schedule' },
         { to: '/delivery/leave', icon: 'fa-calendar-times', label: 'Leave' },
-        { to: '/delivery/salary', icon: 'fa-money-bill-wave', label: 'My Salary' },
+        { to: '/delivery/salary', icon: 'fa-money-bill', label: 'My Salary' },
       ]
     }
   ];
@@ -255,9 +257,16 @@ const DeliveryDashboardLayout = ({ children }) => {
             </div>
 
             {/* Notifications */}
-            <button className="delivery-notification-btn">
+            <button
+              className="delivery-notification-btn"
+              onClick={() => navigate('/delivery/tasks')}
+              aria-label="Notifications"
+              type="button"
+            >
               <i className="fas fa-bell"></i>
-              <div className="delivery-notification-dot"></div>
+              {notificationCount > 0 && (
+                <div className="delivery-notification-dot">{notificationCount}</div>
+              )}
             </button>
 
             {/* Profile Dropdown */}
@@ -279,7 +288,7 @@ const DeliveryDashboardLayout = ({ children }) => {
               {profileMenuOpen && (
                 <div className="delivery-dropdown-menu">
                   <NavLink 
-                    to="/user/profile/view" 
+                    to="/delivery/profile" 
                     className="delivery-dropdown-item"
                     onClick={() => setProfileMenuOpen(false)}
                   >
@@ -287,12 +296,12 @@ const DeliveryDashboardLayout = ({ children }) => {
                     View Profile
                   </NavLink>
                   <NavLink 
-                    to="/user/profile" 
+                    to="/delivery/settings" 
                     className="delivery-dropdown-item"
                     onClick={() => setProfileMenuOpen(false)}
                   >
-                    <i className="fas fa-edit"></i>
-                    Edit Profile
+                    <i className="fas fa-cog"></i>
+                    Settings
                   </NavLink>
                   <div className="delivery-dropdown-item" onClick={handleLogout}>
                     <i className="fas fa-sign-out-alt"></i>

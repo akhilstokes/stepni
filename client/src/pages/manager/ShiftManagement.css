@@ -1,24 +1,21 @@
-/* Simple Shift Management Styles */
 .shift-management {
   padding: 24px;
-  background: #f8fafc;
-  min-height: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-/* Header */
 .shift-header {
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
 }
 
 .shift-header h1 {
-  margin: 0 0 8px 0;
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 600;
   color: #111827;
+  margin: 0 0 8px 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -29,141 +26,403 @@
 }
 
 .shift-header p {
-  margin: 0;
   color: #6b7280;
-  font-size: 16px;
+  margin: 0;
+  font-size: 14px;
 }
 
-/* Shift Grid */
-.shift-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
+.header-actions {
+  display: flex;
+  gap: 12px;
 }
 
-.day-column {
-  background: white;
+.btn {
+  padding: 10px 20px;
   border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+}
+
+.btn-secondary {
+  background-color: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.btn-secondary:hover {
+  background-color: #f9fafb;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #6b7280;
+}
+
+.loading-container i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  color: #3b82f6;
+}
+
+.error-banner {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.stat-total .stat-icon {
+  background-color: #eff6ff;
+  color: #3b82f6;
+}
+
+.stat-present .stat-icon {
+  background-color: #f0fdf4;
+  color: #16a34a;
+}
+
+.stat-absent .stat-icon {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.stat-late .stat-icon {
+  background-color: #fef3c7;
+  color: #f59e0b;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Section */
+.section {
+  margin-bottom: 32px;
+}
+
+.section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section h2 i {
+  color: #3b82f6;
+}
+
+/* Shifts Grid */
+.shifts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.shift-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+}
+
+.shift-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.shift-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.shift-card-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.shift-type-badge {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.shift-type-badge.morning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.shift-type-badge.evening {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.shift-type-badge.night {
+  background-color: #e0e7ff;
+  color: #3730a3;
+}
+
+.shift-type-badge.full_day {
+  background-color: #f0fdf4;
+  color: #166534;
+}
+
+.shift-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shift-info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.shift-info-row i {
+  color: #6b7280;
+  width: 16px;
+}
+
+/* Attendance Table */
+.attendance-table-container {
+  background: white;
+  border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
-.day-header {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  color: white;
-  padding: 16px;
-  text-align: center;
+.attendance-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.day-header h3 {
-  margin: 0;
-  font-size: 16px;
+.attendance-table thead {
+  background-color: #f9fafb;
+}
+
+.attendance-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
   font-weight: 600;
-}
-
-.shift-slots {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.shift-slot {
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
-  background: #f8fafc;
-}
-
-.shift-slot.morning {
-  border-color: #fbbf24;
-  background: #fef3c7;
-}
-
-.shift-slot.evening {
-  border-color: #8b5cf6;
-  background: #f3e8ff;
-}
-
-.shift-time {
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 4px;
-}
-
-.shift-type {
-  font-size: 14px;
   color: #6b7280;
-  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.staff-select {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: white;
-  font-size: 14px;
-  margin-bottom: 12px;
-}
-
-.staff-select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.assign-btn {
-  width: 100%;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+.attendance-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
   transition: background-color 0.2s;
 }
 
-.assign-btn:hover {
-  background: #2563eb;
+.attendance-table tbody tr:hover {
+  background-color: #f9fafb;
 }
 
-/* Save Section */
-.save-section {
-  text-align: center;
+.attendance-table tbody tr:last-child {
+  border-bottom: none;
 }
 
-.save-btn {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+.attendance-table td {
+  padding: 16px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.staff-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.staff-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  border: none;
-  padding: 16px 32px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 600;
+  font-size: 16px;
+}
+
+.staff-name {
+  font-weight: 500;
+  color: #111827;
+}
+
+.staff-id {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.shift-name {
+  font-weight: 500;
+  color: #111827;
+}
+
+.shift-category {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: capitalize;
+}
+
+.time-value {
+  font-weight: 500;
+  color: #111827;
+}
+
+.no-data {
+  color: #9ca3af;
+}
+
+.status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
-.save-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+.status-present {
+  background-color: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
 }
 
-/* Responsive Design */
-@media (max-width: 1200px) {
-  .shift-grid {
-    grid-template-columns: repeat(4, 1fr);
+.status-completed {
+  background-color: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.status-absent {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.late-indicator {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state i {
+  font-size: 64px;
+  color: #d1d5db;
+  margin-bottom: 16px;
+}
+
+.empty-state p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .shifts-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   }
 }
 
@@ -171,30 +430,43 @@
   .shift-management {
     padding: 16px;
   }
-  
-  .shift-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .shift-header {
-    padding: 20px;
-  }
-  
-  .shift-header h1 {
-    font-size: 24px;
-  }
-}
 
-@media (max-width: 480px) {
-  .shift-grid {
-    grid-template-columns: 1fr;
-  }
-  
   .shift-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions .btn {
+    flex: 1;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
     padding: 16px;
   }
-  
-  .shift-header h1 {
-    font-size: 20px;
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .shifts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-table-container {
+    overflow-x: auto;
+  }
+
+  .attendance-table {
+    min-width: 800px;
   }
 }

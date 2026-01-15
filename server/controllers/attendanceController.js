@@ -61,6 +61,11 @@ const attendanceController = {
 
   async getAttendanceById(req, res) {
     try {
+      // Validate ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({ message: 'Invalid attendance ID format' });
+      }
+
       const attendance = await Attendance.findById(req.params.id)
         .populate('staff', 'name email staffId');
       
@@ -102,6 +107,12 @@ const attendanceController = {
   async updateAttendance(req, res) {
     try {
       const { id } = req.params;
+      
+      // Validate ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid attendance ID format' });
+      }
+
       const updates = req.body;
       
       const attendance = await Attendance.findByIdAndUpdate(id, updates, { new: true })
@@ -432,7 +443,85 @@ const attendanceController = {
   // Get today's attendance for all staff (for managers)
   async getTodayAttendanceAll(req, res) {
     try {
-      const attendance = await Attendance.getTodayAttendance();
+      const { date } = req.query;
+      
+      // Use provided date or default to today
+      const targetDate = date ? new Date(date) : new Date();
+      targetDate.setHours(0, 0, 0, 0);
+      
+      const endOfDay = new Date(targetDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Get all staff members (excluding admin role)
+      const allStaff = await User.find({ 
+        role: { $ne: 'admin' }
+      }).select('name email role staffId').lean();
+
+      // Get attendance records for the date
+      const attendanceRecords = await Attendance.find({
+        date: {
+          $gte: targetDate,
+          $lte: endOfDay
+        }
+      })
+      .populate('staff', 'name email role staffId')
+      .populate('shift', 'name startTime endTime')
+      .populate('markedBy', 'name email role')
+      .lean();
+
+      // Create a map of staff ID to attendance
+      const attendanceMap = new Map();
+      attendanceRecords.forEach(record => {
+        if (record.staff && record.staff._id) {
+          attendanceMap.set(record.staff._id.toString(), record);
+        }
+      });
+
+      // Merge all staff with their attendance (or create absent records)
+      const attendance = allStaff.map(staff => {
+        const existingAttendance = attendanceMap.get(staff._id.toString());
+        
+        if (existingAttendance) {
+          return existingAttendance;
+        } else {
+          // Create absent record for staff without attendance
+          return {
+            _id: null,
+            staff: staff,
+            date: targetDate,
+            checkIn: null,
+            checkOut: null,
+            status: 'absent',
+            location: null,
+            notes: null,
+            shift: null,
+            isLate: false,
+            lateMinutes: 0
+          };
+        }
+      });
+
+      // Sort by status (present first, then late, then absent) and then by checkIn time
+      attendance.sort((a, b) => {
+        const statusOrder = { present: 1, late: 2, absent: 3 };
+        const aStatus = a.status || 'absent';
+        const bStatus = b.status || 'absent';
+        
+        if (statusOrder[aStatus] !== statusOrder[bStatus]) {
+          return statusOrder[aStatus] - statusOrder[bStatus];
+        }
+        
+        // If same status, sort by checkIn time (most recent first)
+        if (a.checkIn && b.checkIn) {
+          return new Date(b.checkIn) - new Date(a.checkIn);
+        }
+        if (a.checkIn) return -1;
+        if (b.checkIn) return 1;
+        
+        // If both absent, sort by name
+        return (a.staff?.name || '').localeCompare(b.staff?.name || '');
+      });
+
       res.status(200).json({
         success: true,
         attendance
@@ -447,6 +536,12 @@ const attendanceController = {
   async approveAttendance(req, res) {
     try {
       const { id } = req.params;
+      
+      // Validate ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid attendance ID format' });
+      }
+
       const { status, notes } = req.body;
 
       if (!['approved', 'rejected'].includes(status)) {
@@ -625,6 +720,12 @@ const attendanceController = {
   async verifyAttendance(req, res) {
     try {
       const { id } = req.params;
+      
+      // Validate ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid attendance ID format' });
+      }
+
       const { verified, notes } = req.body;
 
       const attendance = await Attendance.findById(id);
@@ -662,6 +763,11 @@ const attendanceController = {
   async deleteAttendance(req, res) {
     try {
       const { id } = req.params;
+      
+      // Validate ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid attendance ID format' });
+      }
 
       const attendance = await Attendance.findById(id);
       if (!attendance) {
@@ -727,6 +833,101 @@ const attendanceController = {
       });
     } catch (error) {
       console.error('Error fetching staff attendance:', error);
+      res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+  },
+
+  // RFID attendance endpoint (no auth required - called by Arduino)
+  async rfidAttendance(req, res) {
+    try {
+      console.log('RFID Request received:', req.body);
+      
+      const { uid, date, time } = req.body;
+
+      if (!uid) {
+        console.log('RFID Error: UID is missing');
+        return res.status(400).json({ message: 'UID is required' });
+      }
+
+      // Find user by RFID UID (case-insensitive)
+      const user = await User.findOne({ rfidUid: uid.toUpperCase() });
+      if (!user) {
+        console.log('RFID Error: User not found for UID:', uid);
+        return res.status(404).json({ message: 'RFID card not registered', uid });
+      }
+
+      console.log('RFID User found:', user.name, user.staffId);
+
+      // Parse date and time from Arduino
+      let timestamp;
+      if (date && time) {
+        const [day, month, year] = date.split('-');
+        const [hours, minutes, seconds] = time.split(':');
+        timestamp = new Date(year, month - 1, day, hours, minutes, seconds);
+      } else {
+        // If no date/time provided, use current time
+        timestamp = new Date();
+      }
+
+      const today = new Date(timestamp);
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Check if attendance record exists for today
+      let attendance = await Attendance.findOne({
+        staff: user._id,
+        date: { $gte: today, $lt: tomorrow }
+      });
+
+      let action = '';
+      if (!attendance) {
+        // First scan - check in
+        attendance = new Attendance({
+          staff: user._id,
+          date: today,
+          checkIn: timestamp,
+          status: 'present',
+          location: 'RFID Scanner',
+          notes: 'Auto-marked via RFID'
+        });
+        action = 'check_in';
+        console.log('RFID: Creating new check-in record');
+      } else if (!attendance.checkOut) {
+        // Second scan - check out
+        attendance.checkOut = timestamp;
+        action = 'check_out';
+        console.log('RFID: Updating with check-out');
+      } else {
+        // Already checked in and out
+        console.log('RFID: Already checked in and out today');
+        return res.status(400).json({ 
+          message: 'Already checked in and out today',
+          user: { name: user.name, staffId: user.staffId }
+        });
+      }
+
+      await attendance.save();
+      console.log('RFID: Attendance saved successfully');
+
+      res.status(200).json({
+        success: true,
+        message: `${action === 'check_in' ? 'Check-in' : 'Check-out'} successful`,
+        action,
+        user: {
+          name: user.name,
+          staffId: user.staffId,
+          email: user.email
+        },
+        attendance: {
+          date: attendance.date,
+          checkIn: attendance.checkIn,
+          checkOut: attendance.checkOut,
+          status: attendance.status
+        }
+      });
+    } catch (error) {
+      console.error('RFID attendance error:', error);
       res.status(500).json({ message: 'Server Error', error: error.message });
     }
   }

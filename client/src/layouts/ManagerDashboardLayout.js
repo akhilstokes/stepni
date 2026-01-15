@@ -86,7 +86,8 @@ const ManagerDashboardLayout = ({ children }) => {
   const getPageTitle = () => {
     const path = location.pathname;
     if (path === '/manager/home') return { title: 'Dashboard', subtitle: 'Manager overview and controls', icon: 'fa-tachometer-alt' };
-    if (path.includes('/live')) return { title: 'Live Check-ins', subtitle: 'Real-time staff check-ins', icon: 'fa-map-marker-alt' };
+    if (path.includes('/staff-schedule')) return { title: 'Staff Schedule', subtitle: 'Assign shifts to staff members', icon: 'fa-calendar-check' };
+    if (path.includes('/live-attendance')) return { title: 'Attendance History', subtitle: 'View staff attendance records', icon: 'fa-history' };
     if (path.includes('/leaves')) return { title: 'Pending Leaves', subtitle: 'Review leave requests', icon: 'fa-calendar-times' };
     if (path.includes('/attendance')) return { title: 'Attendance Verify', subtitle: 'Verify staff attendance', icon: 'fa-user-check' };
     if (path.includes('/expenses')) return { title: 'Expenses', subtitle: 'Manage expenses', icon: 'fa-receipt' };
@@ -114,7 +115,7 @@ const ManagerDashboardLayout = ({ children }) => {
       section: 'Operations',
       items: [
         { to: '/manager/home', icon: 'fa-tachometer-alt', label: 'Dashboard' },
-        { to: '/manager/live', icon: 'fa-map-marker-alt', label: 'Live Check-ins' },
+        { to: '/manager/live-attendance', icon: 'fa-history', label: 'Attendance History' },
         { to: '/manager/leaves', icon: 'fa-calendar-times', label: 'Pending Leaves' },
         { to: '/manager/attendance', icon: 'fa-user-check', label: 'Attendance Verify' },
         { to: '/manager/expenses', icon: 'fa-receipt', label: 'Expenses' },
@@ -143,6 +144,7 @@ const ManagerDashboardLayout = ({ children }) => {
     {
       section: 'Staff & Planning',
       items: [
+        { to: '/manager/staff-schedule', icon: 'fa-calendar-check', label: 'Staff Schedule' },
         { to: '/manager/shifts', icon: 'fa-clock', label: 'Shift Planning' },
         { to: '/manager/shift-management', icon: 'fa-calendar-alt', label: 'Shift Management' },
         { to: '/manager/chem-requests', icon: 'fa-flask', label: 'Chemical Requests' },
@@ -322,7 +324,7 @@ const ManagerDashboardLayout = ({ children }) => {
               {profileMenuOpen && (
                 <div className="manager-dropdown-menu">
                   <NavLink 
-                    to="/user/profile/view" 
+                    to="/manager/profile" 
                     className="manager-dropdown-item"
                     onClick={() => setProfileMenuOpen(false)}
                   >
@@ -330,12 +332,12 @@ const ManagerDashboardLayout = ({ children }) => {
                     View Profile
                   </NavLink>
                   <NavLink 
-                    to="/user/profile" 
+                    to="/manager/settings" 
                     className="manager-dropdown-item"
                     onClick={() => setProfileMenuOpen(false)}
                   >
-                    <i className="fas fa-edit"></i>
-                    Edit Profile
+                    <i className="fas fa-cog"></i>
+                    Settings
                   </NavLink>
                   <div className="manager-dropdown-item" onClick={handleLogout}>
                     <i className="fas fa-sign-out-alt"></i>

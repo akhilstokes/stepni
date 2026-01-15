@@ -391,51 +391,36 @@ const ManagerDashboard = () => {
       </div>
 
       {/* Notifications Section */}
-
-      <div className="notifications-section">
-        <div className="notifications-header">
-          <h4>Recent Notifications</h4>
-          {unread > 0 && (
-            <span className="unread-badge">{unread} new</span>
-          )}
+      <div className="dash-card" style={{ padding: 16 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <h4 style={{ marginTop: 0 }}>Recent Notifications</h4>
+          <span style={{ color:'#64748b', fontSize:12 }}>Unread: {unread}</span>
         </div>
         {notifs.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">🔔</div>
-            <p className="empty-text">No notifications at the moment</p>
-            <p className="empty-subtext">You're all caught up!</p>
-          </div>
+          <div style={{ color:'#94a3b8' }}>No notifications</div>
         ) : (
-          <div className="notifications-list">
+          <ul style={{ listStyle:'none', padding:0, margin:0, display:'grid', gap:8 }}>
             {notifs.slice(0, 5).map(n => (
-              <div key={n._id} className={`notification-item ${!n.read ? 'unread' : ''}`}>
-                <div className="notification-icon">{getNotificationIcon(n.title)}</div>
-                <div className="notification-content">
-                  <div className="notification-title">{n.title || 'Update'}</div>
-                  <div className="notification-message">{n.message}</div>
-                  {n.meta && formatMetadata(n.meta) && formatMetadata(n.meta).length > 0 && (
-                    <div className="notification-metadata">
-                      {formatMetadata(n.meta).map((item, idx) => (
-                        <span key={idx} className="metadata-item">
-                          <strong>{item.label}:</strong> {item.value}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="notification-time">
-                    {new Date(n.createdAt).toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+              <li key={n._id} style={{
+                border:'1px solid #e2e8f0', borderRadius:8, padding:12, background: n.read ? '#fff' : '#f8fafc'
+              }}>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:12 }}>
+                  <div>
+                    <div style={{ fontWeight:600 }}>{n.title || 'Update'}</div>
+                    <div style={{ color:'#475569', fontSize:14 }}>{n.message}</div>
+                    {n.meta && (
+                      <div style={{ marginTop:6, display:'flex', gap:8, flexWrap:'wrap', color:'#64748b', fontSize:12 }}>
+                        {Object.entries(n.meta).map(([k,v]) => (
+                          <span key={k}><strong>{k}:</strong> {String(v)}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ color:'#94a3b8', fontSize:12, marginTop:6 }}>{new Date(n.createdAt).toLocaleString()}</div>
                   </div>
-                </div>
-                <div className="notification-actions">
-                  {n.link && (
-                    <button 
-                      className="notif-action-btn notif-open-btn" 
-                      onClick={() => {
+                  <div style={{ display:'flex', flexDirection:'column', gap:8, alignItems:'flex-end' }}>
+                    {n.link && (
+                      <button className="btn" onClick={() => {
+
                         if (n.link.startsWith('http')) {
                           window.open(n.link, '_blank');
                         } else {
@@ -456,8 +441,9 @@ const ManagerDashboard = () => {
                   )}
                 </div>
               </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
     </div>

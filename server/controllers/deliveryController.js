@@ -204,6 +204,369 @@ exports.listDeliveredForLab = async (req, res) => {
   }
 };
 
+// Get delivery stats for dashboard
+exports.getDeliveryStats = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Get today's tasks for this delivery staff
+    const todayTasks = await DeliveryTask.find({
+      assignedTo: userId,
+      createdAt: { $gte: today, $lt: tomorrow }
+    });
+
+    const todayDeliveries = todayTasks.filter(task => 
+      task.meta?.type === 'delivery' || task.title.toLowerCase().includes('delivery')
+    ).length;
+
+    const todayPickups = todayTasks.filter(task => 
+      task.meta?.type === 'pickup' || task.title.toLowerCase().includes('pickup')
+    ).length;
+
+    const completedTasks = todayTasks.filter(task => task.status === 'completed').length;
+    const pendingTasks = todayTasks.filter(task => 
+      ['assigned', 'in_progress'].includes(task.status)
+    ).length;
+
+    // Calculate earnings (mock calculation - adjust based on your business logic)
+    const totalEarnings = completedTasks * 100; // ₹100 per completed task
+
+    res.json({
+      todayDeliveries,
+      todayPickups,
+      completedTasks,
+      pendingTasks,
+      totalEarnings
+    });
+  } catch (error) {
+    console.error('Error fetching delivery stats:', error);
+    res.status(500).json({ message: 'Failed to fetch delivery stats' });
+  }
+};
+
+// Get assigned tasks for delivery staff
+exports.getAssignedTasks = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    const tasks = await DeliveryTask.find({
+      assignedTo: userId,
+      status: { $in: ['assigned', 'in_progress'] }
+    })
+    .populate('customerUserId', 'name email phoneNumber address')
+    .sort({ scheduledAt: 1, createdAt: -1 })
+    .limit(10);
+
+    // Transform tasks to match frontend expectations
+    const transformedTasks = tasks.map(task => ({
+      id: task._id,
+      title: task.title,
+      type: task.meta?.type || (task.title.toLowerCase().includes('pickup') ? 'pickup' : 'delivery'),
+      status: task.status,
+      priority: task.meta?.priority || 'medium',
+      scheduledTime: task.scheduledAt || task.createdAt,
+      estimatedDuration: task.meta?.estimatedDuration || '30-45 mins',
+      customer: {
+        name: task.customerUserId?.name || 'Unknown Customer',
+        phone: task.customerUserId?.phoneNumber || 'N/A',
+        address: task.pickupAddress || task.customerUserId?.address || 'Address not provided',
+        location: `https://maps.google.com/?q=${encodeURIComponent(task.pickupAddress || 'Unknown Location')}`
+      },
+      barrels: task.meta?.barrels || [],
+      quantity: task.meta?.quantity || 1,
+      completedTime: task.status === 'completed' ? task.updatedAt : null
+    }));
+
+    res.json({ tasks: transformedTasks });
+  } catch (error) {
+    console.error('Error fetching assigned tasks:', error);
+    res.status(500).json({ message: 'Failed to fetch assigned tasks' });
+  }
+};
+
+// Get pending tasks (same as assigned tasks but with different endpoint)
+exports.getPendingTasks = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    const tasks = await DeliveryTask.find({
+      assignedTo: userId,
+      status: { $in: ['assigned', 'in_progress'] }
+    })
+    .populate('customerUserId', 'name email phoneNumber address')
+    .sort({ scheduledAt: 1, createdAt: -1 });
+
+    // Transform tasks to match frontend expectations
+    const transformedTasks = tasks.map(task => ({
+      id: task._id,
+      title: task.title,
+      type: task.meta?.type || (task.title.toLowerCase().includes('pickup') ? 'pickup' : 'delivery'),
+      status: task.status,
+      priority: task.meta?.priority || 'medium',
+      scheduledTime: task.scheduledAt || task.createdAt,
+      estimatedDuration: task.meta?.estimatedDuration || '30-45 mins',
+      customer: {
+        name: task.customerUserId?.name || 'Unknown Customer',
+        phone: task.customerUserId?.phoneNumber || 'N/A',
+        address: task.pickupAddress || task.customerUserId?.address || 'Address not provided',
+        location: `https://maps.google.com/?q=${encodeURIComponent(task.pickupAddress || 'Unknown Location')}`
+      },
+      barrels: task.meta?.barrels || [],
+      quantity: task.meta?.quantity || 1,
+      completedTime: task.status === 'completed' ? task.updatedAt : null
+    }));
+
+    res.json({ tasks: transformedTasks });
+  } catch (error) {
+    console.error('Error fetching pending tasks:', error);
+    res.status(500).json({ message: 'Failed to fetch pending tasks' });
+  }
+};
+
+// Get today's deliveries
+exports.getTodayDeliveries = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const tasks = await DeliveryTask.find({
+      assignedTo: userId,
+      createdAt: { $gte: today, $lt: tomorrow },
+      $or: [
+        { 'meta.type': 'delivery' },
+        { title: { $regex: 'delivery', $options: 'i' } }
+      ]
+    })
+    .populate('customerUserId', 'name email phoneNumber address')
+    .sort({ scheduledAt: 1, createdAt: -1 });
+
+    // Transform tasks to match frontend expectations
+    const transformedTasks = tasks.map(task => ({
+      id: task._id,
+      title: task.title,
+      type: 'delivery',
+      status: task.status,
+      priority: task.meta?.priority || 'medium',
+      scheduledTime: task.scheduledAt || task.createdAt,
+      estimatedDuration: task.meta?.estimatedDuration || '30-45 mins',
+      customer: {
+        name: task.customerUserId?.name || 'Unknown Customer',
+        phone: task.customerUserId?.phoneNumber || 'N/A',
+        address: task.dropAddress || task.customerUserId?.address || 'Address not provided',
+        location: `https://maps.google.com/?q=${encodeURIComponent(task.dropAddress || 'Unknown Location')}`
+      },
+      barrels: task.meta?.barrels || [],
+      quantity: task.meta?.quantity || 1,
+      completedTime: task.status === 'completed' ? task.updatedAt : null
+    }));
+
+    res.json({ deliveries: transformedTasks });
+  } catch (error) {
+    console.error('Error fetching today deliveries:', error);
+    res.status(500).json({ message: 'Failed to fetch today deliveries' });
+  }
+};
+
+// Get today's pickups
+exports.getTodayPickups = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const tasks = await DeliveryTask.find({
+      assignedTo: userId,
+      createdAt: { $gte: today, $lt: tomorrow },
+      $or: [
+        { 'meta.type': 'pickup' },
+        { title: { $regex: 'pickup', $options: 'i' } }
+      ]
+    })
+    .populate('customerUserId', 'name email phoneNumber address')
+    .sort({ scheduledAt: 1, createdAt: -1 });
+
+    // Transform tasks to match frontend expectations
+    const transformedTasks = tasks.map(task => ({
+      id: task._id,
+      title: task.title,
+      type: 'pickup',
+      status: task.status,
+      priority: task.meta?.priority || 'medium',
+      scheduledTime: task.scheduledAt || task.createdAt,
+      estimatedDuration: task.meta?.estimatedDuration || '30-45 mins',
+      customer: {
+        name: task.customerUserId?.name || 'Unknown Customer',
+        phone: task.customerUserId?.phoneNumber || 'N/A',
+        address: task.pickupAddress || task.customerUserId?.address || 'Address not provided',
+        location: `https://maps.google.com/?q=${encodeURIComponent(task.pickupAddress || 'Unknown Location')}`
+      },
+      barrels: task.meta?.barrels || [],
+      quantity: task.meta?.quantity || 1,
+      completedTime: task.status === 'completed' ? task.updatedAt : null
+    }));
+
+    res.json({ pickups: transformedTasks });
+  } catch (error) {
+    console.error('Error fetching today pickups:', error);
+    res.status(500).json({ message: 'Failed to fetch today pickups' });
+  }
+};
+
+// Get earnings data
+exports.getEarnings = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Calculate date ranges
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    // Get completed tasks for different periods
+    const todayTasks = await DeliveryTask.countDocuments({
+      assignedTo: userId,
+      status: 'completed',
+      updatedAt: { $gte: today, $lt: tomorrow }
+    });
+
+    const weekTasks = await DeliveryTask.countDocuments({
+      assignedTo: userId,
+      status: 'completed',
+      updatedAt: { $gte: weekStart }
+    });
+
+    const monthTasks = await DeliveryTask.countDocuments({
+      assignedTo: userId,
+      status: 'completed',
+      updatedAt: { $gte: monthStart }
+    });
+
+    const totalTasks = await DeliveryTask.countDocuments({
+      assignedTo: userId,
+      status: 'completed'
+    });
+
+    // Calculate earnings (₹100 per completed task - adjust based on your business logic)
+    const ratePerTask = 100;
+    const summary = {
+      today: todayTasks * ratePerTask,
+      thisWeek: weekTasks * ratePerTask,
+      thisMonth: monthTasks * ratePerTask,
+      total: totalTasks * ratePerTask
+    };
+
+    // Get recent earnings history
+    const recentTasks = await DeliveryTask.find({
+      assignedTo: userId,
+      status: 'completed'
+    })
+    .populate('customerUserId', 'name')
+    .sort({ updatedAt: -1 })
+    .limit(20);
+
+    const history = recentTasks.map(task => ({
+      id: task._id,
+      date: task.updatedAt,
+      task: task.title,
+      customer: task.customerUserId?.name || 'Unknown Customer',
+      amount: ratePerTask,
+      type: task.meta?.type || 'delivery'
+    }));
+
+    res.json({ summary, history });
+  } catch (error) {
+    console.error('Error fetching earnings:', error);
+    res.status(500).json({ message: 'Failed to fetch earnings' });
+  }
+};
+
+// Handle task actions (start, complete, etc.)
+exports.handleTaskAction = async (req, res) => {
+  try {
+    const { id, action } = req.params;
+    const userId = req.user._id;
+    const { timestamp, location } = req.body;
+
+    const task = await DeliveryTask.findById(id);
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    // Check if user is assigned to this task
+    if (task.assignedTo.toString() !== userId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this task' });
+    }
+
+    // Handle different actions
+    switch (action) {
+      case 'start':
+        if (task.status !== 'assigned') {
+          return res.status(400).json({ message: 'Task cannot be started' });
+        }
+        task.status = 'in_progress';
+        task.meta = { ...task.meta, startedAt: timestamp || new Date() };
+        break;
+
+      case 'complete':
+        if (task.status !== 'in_progress') {
+          return res.status(400).json({ message: 'Task cannot be completed' });
+        }
+        task.status = 'completed';
+        task.meta = { ...task.meta, completedAt: timestamp || new Date() };
+        break;
+
+      case 'cancel':
+        if (['completed', 'cancelled'].includes(task.status)) {
+          return res.status(400).json({ message: 'Task cannot be cancelled' });
+        }
+        task.status = 'cancelled';
+        task.meta = { ...task.meta, cancelledAt: timestamp || new Date() };
+        break;
+
+      default:
+        return res.status(400).json({ message: 'Invalid action' });
+    }
+
+    // Add location if provided
+    if (location) {
+      task.meta = { 
+        ...task.meta, 
+        [`${action}Location`]: location 
+      };
+    }
+
+    await task.save();
+
+    res.json({
+      success: true,
+      message: `Task ${action}ed successfully`,
+      task: {
+        id: task._id,
+        status: task.status,
+        updatedAt: task.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('Error handling task action:', error);
+    res.status(500).json({ message: 'Failed to update task' });
+  }
+};
+
 // Barrel intake functions
 exports.intakeBarrels = async (req, res) => {
   try {

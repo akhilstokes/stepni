@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { createTask } from '../../services/deliveryService';
+import './ManagerSellRequests.css';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const ASSIGN_BASE = process.env.REACT_APP_ASSIGN_BASE || '';
@@ -17,6 +18,7 @@ const ManagerSellRequests = () => {
   const [error, setError] = useState('');
   const [filters, setFilters] = useState({ status: 'PENDING' });
   const [typeSeg, setTypeSeg] = useState('ALL'); // ALL | BARRELS | EMPTY | PRODUCTION
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
   const [assignDeliveryId, setAssignDeliveryId] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState('');
@@ -506,65 +508,515 @@ const ManagerSellRequests = () => {
     return '-';
   };
 
+  // Calculate stats
+  const stats = {
+    total: filtered.length,
+    pending: filtered.filter(r => r._statusUpper === 'PENDING' || r._statusUpper === 'REQUESTED').length,
+    approved: filtered.filter(r => r._statusUpper === 'APPROVED' || r.status === 'approved' || approvedRequests.has(r._id)).length,
+    assigned: filtered.filter(r => r._statusUpper === 'ASSIGNED' || assignedRequests.has(r._id)).length
+  };
+
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Sell Requests</h2>
-      {error && <div style={{ color:'tomato', marginBottom:8 }}>{error}</div>}
-      {info && <div className="alert success" style={{ marginBottom:8 }}>{info}</div>}
-
-      <div style={{ display:'flex', gap:12, alignItems:'center', marginBottom:12, flexWrap:'wrap' }}>
-        <label>Status</label>
-        <select value={filters.status} onChange={e=>setFilters(s=>({ ...s, status:e.target.value }))}>
-          <option value="">All</option>
-          {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <button onClick={() => load(true)} disabled={loading}>
-          {loading ? 'Loading...' : 'Refresh'}
-        </button>
-        <button onClick={() => navigate('/manager/live-locations')} style={{ marginLeft: 8 }}>
-          Live Staff Map
-        </button>
-        <button onClick={()=>{ setShowHistory(true); loadHistory(); }} style={{ marginLeft: 8 }}>
-          History
-        </button>
-
-        <div style={{ display:'flex', gap:6, alignItems:'center', marginLeft: 'auto' }}>
-          <span style={{ color:'#64748b', fontSize:12 }}>View:</span>
-          {[
-            {key:'ALL', label:'All'},
-            {key:'BARRELS', label:'Barrels'},
-            {key:'EMPTY', label:'Empty Barrels'},
-            {key:'PRODUCTION', label:'Production'}
-          ].map(seg => (
-            <button
-              key={seg.key}
-              onClick={() => setTypeSeg(seg.key)}
-              style={{
-                padding:'6px 10px',
-                borderRadius:6,
-                border: '1px solid ' + (typeSeg===seg.key ? '#2563eb' : '#e2e8f0'),
-                background: typeSeg===seg.key ? '#eff6ff' : 'white',
-                color: typeSeg===seg.key ? '#2563eb' : '#334155',
-                fontSize:12
-              }}
-            >
-              {seg.label}
-            </button>
-          ))}
-        </div>
-
-      {showHistory && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
-          <div style={{ background:'#fff', width:'min(980px, 96%)', maxHeight:'84vh', borderRadius:8, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-            <div style={{ padding:12, borderBottom:'1px solid #eee', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div style={{ fontWeight:600 }}>Sell Requests History</div>
-              <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                <button onClick={loadHistory} disabled={historyLoading}>{historyLoading ? 'Loading...' : 'Refresh'}</button>
-                <button onClick={()=> setShowHistory(false)}>Close</button>
-              </div>
+    <div className="manager-sell-requests">
+      {/* Page Header */}
+      <div className="page-header">
+        <div className="header-top">
+          <div className="header-title">
+            <div className="title-icon">
+              <i className="fas fa-clipboard-list" />
             </div>
-            <div style={{ padding:12, overflow:'auto' }}>
-              <table className="dashboard-table" style={{ minWidth: 720 }}>
+            <h1>Sell Requests Management</h1>
+          </div>
+          <div className="header-actions">
+            <button 
+              onClick={() => load(true)} 
+              disabled={loading}
+              className="btn btn-secondary"
+            >
+              <i className="fas fa-sync-alt" />
+              {loading ? 'Loading...' : 'Refresh'}
+            </button>
+            <button 
+              onClick={() => navigate('/manager/live-locations')}
+              className="btn btn-secondary"
+            >
+              <i className="fas fa-map-marked-alt" />
+              Live Map
+            </button>
+            <button 
+              onClick={() => { setShowHistory(true); loadHistory(); }}
+              className="btn btn-primary"
+            >
+              <i className="fas fa-history" />
+              View History
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Bar */}
+      <div className="stats-bar">
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Total Requests</span>
+            <div className="stat-icon total">
+              <i className="fas fa-list" />
+            </div>
+          </div>
+          <div className="stat-value">{stats.total}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Pending</span>
+            <div className="stat-icon pending">
+              <i className="fas fa-clock" />
+            </div>
+          </div>
+          <div className="stat-value">{stats.pending}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Approved</span>
+            <div className="stat-icon approved">
+              <i className="fas fa-check-circle" />
+            </div>
+          </div>
+          <div className="stat-value">{stats.approved}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-header">
+            <span className="stat-label">Assigned</span>
+            <div className="stat-icon assigned">
+              <i className="fas fa-truck" />
+            </div>
+          </div>
+          <div className="stat-value">{stats.assigned}</div>
+        </div>
+      </div>
+
+      {/* Alerts */}
+      {error && (
+        <div className="alert alert-error">
+          <i className="fas fa-exclamation-circle" />
+          {error}
+        </div>
+      )}
+
+      {info && (
+        <div className="alert alert-success">
+          <i className="fas fa-check-circle" />
+          {info}
+        </div>
+      )}
+
+      {/* Controls Panel */}
+      <div className="controls-panel">
+        <div className="controls-row">
+          <div className="filter-group">
+            <label className="filter-label">Status Filter:</label>
+            <select 
+              value={filters.status} 
+              onChange={e => setFilters(s => ({ ...s, status: e.target.value }))}
+              className="filter-select"
+            >
+              <option value="">All Statuses</option>
+              {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          
+          <div className="type-filters">
+            {[
+              { key: 'ALL', label: 'All Types', icon: 'fas fa-th' },
+              { key: 'BARRELS', label: 'Barrels', icon: 'fas fa-drum' },
+              { key: 'EMPTY', label: 'Empty Barrels', icon: 'fas fa-box-open' },
+              { key: 'PRODUCTION', label: 'Production', icon: 'fas fa-industry' }
+            ].map(seg => (
+              <button
+                key={seg.key}
+                onClick={() => setTypeSeg(seg.key)}
+                className={`type-filter-btn ${typeSeg === seg.key ? 'active' : ''}`}
+              >
+                <i className={seg.icon} />
+                {seg.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="view-toggle">
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`view-toggle-btn ${viewMode === 'cards' ? 'active' : ''}`}
+              title="Card View"
+            >
+              <i className="fas fa-th-large" />
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`view-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+              title="Table View"
+            >
+              <i className="fas fa-list" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Requests Display */}
+      {loading ? (
+        <div className="loading-state">
+          <div className="loading-spinner">
+            <i className="fas fa-spinner fa-spin" />
+          </div>
+          <div className="loading-text">Loading sell requests...</div>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">
+            <i className="fas fa-inbox" />
+          </div>
+          <div className="empty-title">No sell requests found</div>
+          {(filters.status || typeSeg !== 'ALL') && (
+            <div className="empty-subtitle">Try adjusting your filters to see more results</div>
+          )}
+        </div>
+      ) : viewMode === 'cards' ? (
+        /* Card View */
+        <div className="requests-grid">
+          {filtered.map((r) => {
+            const toStr = (v) => {
+              if (v == null) return '';
+              if (typeof v === 'string' || typeof v === 'number') return String(v);
+              if (typeof v === 'object') {
+                const cand = v.name || v.fullName || v.email || v.phone || v.mobile || v._id;
+                return cand ? String(cand) : '';
+              }
+              return '';
+            };
+
+            const name = toStr(r._farmer) || toStr(r.farmerName) || toStr(r.userName) || toStr(r.name) || toStr(r.customerName) || toStr(r.contactName) || toStr(r.farmer?.name) || toStr(r.requestedBy?.name) || toStr(r.createdBy?.name) || toStr(r.requester?.name) || toStr(r.ownerName) || toStr(r.profile?.name) || toStr(r.user?.fullName) || toStr(r.user?.name) || toStr(r.customer?.name);
+            const phone = toStr(r.phone) || toStr(r.mobile) || toStr(r.contact) || toStr(r.user?.phone) || toStr(r.user?.mobile) || toStr(r.customer?.phone);
+            const email = toStr(r.email) || toStr(r.user?.email) || toStr(r.customer?.email) || toStr(r.farmerId?.email);
+
+            return (
+              <div key={r._id} className="request-card">
+                <div className="request-card-header">
+                  <div className="request-id-section">
+                    <span className="request-id-label">Request ID</span>
+                    <span className="request-id-value">#{r._id?.slice(-8) || 'N/A'}</span>
+                  </div>
+                  <div className="request-type-section">
+                    <span className={`type-badge ${(r._type || '').toLowerCase().replace('_', '-')}`}>
+                      <i className={
+                        r._type === 'LATEX' ? 'fas fa-flask' :
+                        r._type === 'BARREL' ? 'fas fa-drum' :
+                        r._type === 'SELL_BARRELS' ? 'fas fa-box-open' :
+                        r._type === 'CHEMICAL' ? 'fas fa-vial' : 'fas fa-shopping-cart'
+                      } />
+                      {r._type || 'SELL'}
+                    </span>
+                    <span className={`status-badge ${
+                      (r._statusUpper === 'PENDING' || r._statusUpper === 'REQUESTED') ? 'pending' :
+                      (r._statusUpper === 'APPROVED' || r.status === 'approved' || approvedRequests.has(r._id)) ? 'approved' :
+                      (r._statusUpper === 'ASSIGNED' || assignedRequests.has(r._id)) ? 'assigned' : 'default'
+                    }`}>
+                      <i className={
+                        (r._statusUpper === 'PENDING' || r._statusUpper === 'REQUESTED') ? 'fas fa-clock' :
+                        (r._statusUpper === 'APPROVED' || r.status === 'approved' || approvedRequests.has(r._id)) ? 'fas fa-check-circle' :
+                        (r._statusUpper === 'ASSIGNED' || assignedRequests.has(r._id)) ? 'fas fa-truck' : 'fas fa-info-circle'
+                      } />
+                      {assignedRequests.has(r._id) ? 'ASSIGNED' : (r.status || 'PENDING')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="request-customer-section">
+                  <span className="customer-label">Customer Information</span>
+                  <div className="customer-info">
+                    <div className="customer-name-display">
+                      <i className="fas fa-user-circle" />
+                      {name || 'Unknown'}
+                    </div>
+                    {phone && (
+                      <div className="customer-contact-info">
+                        <i className="fas fa-phone" />
+                        {phone}
+                      </div>
+                    )}
+                    {!phone && email && (
+                      <div className="customer-contact-info">
+                        <i className="fas fa-envelope" />
+                        {email}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="request-details-section">
+                  <div className="details-grid">
+                    {r._type === 'SELL_BARRELS' && r.barrelCount && (
+                      <div className="detail-item">
+                        <span className="detail-item-label">Barrel Count</span>
+                        <span className="detail-item-value">
+                          <i className="fas fa-drum" />
+                          {r.barrelCount}
+                        </span>
+                      </div>
+                    )}
+                    {r._type === 'SELL_BARRELS' && r.companyBarrel && (
+                      <div className="detail-item">
+                        <span className="detail-item-label">Company</span>
+                        <span className="detail-item-value">
+                          <i className="fas fa-building" />
+                          {r.companyBarrel}
+                        </span>
+                      </div>
+                    )}
+                    <div className="detail-item">
+                      <span className="detail-item-label">Requested Date</span>
+                      <span className="detail-item-value">
+                        <i className="fas fa-calendar" />
+                        {safeDate(r._createdAt || r.requestedAt || r.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                  {r._notes && (
+                    <div className="request-notes">
+                      <span className="notes-label">Notes</span>
+                      <p className="notes-text">{r._notes}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="request-footer">
+                  <div className="request-actions">
+                    {r._type === 'SELL' && (
+                      <>
+                        <button
+                          onClick={() => openAssignDelivery(r._id)}
+                          disabled={assignedRequests.has(r._id)}
+                          className="action-btn action-btn-assign"
+                        >
+                          <i className="fas fa-truck" />
+                          {assignedRequests.has(r._id) ? 'Assigned' : 'Assign'}
+                        </button>
+                        <button
+                          disabled={verifyingId === r._id}
+                          onClick={() => verify(r._id)}
+                          className="action-btn action-btn-verify"
+                        >
+                          <i className="fas fa-check-circle" />
+                          {verifyingId === r._id ? 'Verifying...' : 'Verify'}
+                        </button>
+                      </>
+                    )}
+                    {r._type === 'SELL_BARRELS' && (
+                      <button
+                        onClick={() => approve(r._id)}
+                        disabled={approvedRequests.has(r._id)}
+                        className="action-btn action-btn-approve"
+                      >
+                        <i className="fas fa-thumbs-up" />
+                        {approvedRequests.has(r._id) ? 'Approved' : 'Approve'}
+                      </button>
+                    )}
+                    {r._type !== 'SELL' && r._type !== 'SELL_BARRELS' && (
+                      <button
+                        onClick={() => alert(`View ${r._type} request details`)}
+                        className="action-btn action-btn-details"
+                      >
+                        <i className="fas fa-info-circle" />
+                        Details
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* Table View */
+        <div className="requests-table-container">
+          <table className="requests-table">
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Customer</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Details</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r) => {
+                const toStr = (v) => {
+                  if (v == null) return '';
+                  if (typeof v === 'string' || typeof v === 'number') return String(v);
+                  if (typeof v === 'object') {
+                    const cand = v.name || v.fullName || v.email || v.phone || v.mobile || v._id;
+                    return cand ? String(cand) : '';
+                  }
+                  return '';
+                };
+
+                const name = toStr(r._farmer) || toStr(r.farmerName) || toStr(r.userName) || toStr(r.name) || toStr(r.customerName) || toStr(r.contactName) || toStr(r.farmer?.name) || toStr(r.requestedBy?.name) || toStr(r.createdBy?.name) || toStr(r.requester?.name) || toStr(r.ownerName) || toStr(r.profile?.name) || toStr(r.user?.fullName) || toStr(r.user?.name) || toStr(r.customer?.name);
+                const phone = toStr(r.phone) || toStr(r.mobile) || toStr(r.contact) || toStr(r.user?.phone) || toStr(r.user?.mobile) || toStr(r.customer?.phone);
+                const email = toStr(r.email) || toStr(r.user?.email) || toStr(r.customer?.email) || toStr(r.farmerId?.email);
+
+                return (
+                  <tr key={r._id}>
+                    <td>
+                      <span className="cell-id">#{r._id?.slice(-8) || 'N/A'}</span>
+                    </td>
+                    <td>
+                      <div className="cell-customer">
+                        <span className="customer-name">{name || 'Unknown'}</span>
+                        {phone && <span className="customer-contact"><i className="fas fa-phone" /> {phone}</span>}
+                        {!phone && email && <span className="customer-contact"><i className="fas fa-envelope" /> {email}</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`type-badge ${(r._type || '').toLowerCase().replace('_', '-')}`}>
+                        <i className={
+                          r._type === 'LATEX' ? 'fas fa-flask' :
+                          r._type === 'BARREL' ? 'fas fa-drum' :
+                          r._type === 'SELL_BARRELS' ? 'fas fa-box-open' :
+                          r._type === 'CHEMICAL' ? 'fas fa-vial' : 'fas fa-shopping-cart'
+                        } />
+                        {r._type || 'SELL'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`status-badge ${
+                        (r._statusUpper === 'PENDING' || r._statusUpper === 'REQUESTED') ? 'pending' :
+                        (r._statusUpper === 'APPROVED' || r.status === 'approved' || approvedRequests.has(r._id)) ? 'approved' :
+                        (r._statusUpper === 'ASSIGNED' || assignedRequests.has(r._id)) ? 'assigned' : 'default'
+                      }`}>
+                        <i className={
+                          (r._statusUpper === 'PENDING' || r._statusUpper === 'REQUESTED') ? 'fas fa-clock' :
+                          (r._statusUpper === 'APPROVED' || r.status === 'approved' || approvedRequests.has(r._id)) ? 'fas fa-check-circle' :
+                          (r._statusUpper === 'ASSIGNED' || assignedRequests.has(r._id)) ? 'fas fa-truck' : 'fas fa-info-circle'
+                        } />
+                        {assignedRequests.has(r._id) ? 'ASSIGNED' : (r.status || 'PENDING')}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="cell-details">
+                        {r._type === 'SELL_BARRELS' && (
+                          <>
+                            {r.barrelCount && (
+                              <div className="detail-row">
+                                <i className="fas fa-drum" />
+                                <span className="detail-label">Barrels:</span>
+                                <span className="detail-value">{r.barrelCount}</span>
+                              </div>
+                            )}
+                            {r.companyBarrel && (
+                              <div className="detail-row">
+                                <i className="fas fa-building" />
+                                <span className="detail-label">Company:</span>
+                                <span className="detail-value">{r.companyBarrel}</span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        {r._notes && (
+                          <div className="detail-row">
+                            <i className="fas fa-sticky-note" />
+                            <span className="detail-value">{r._notes.length > 40 ? r._notes.substring(0, 40) + '...' : r._notes}</span>
+                          </div>
+                        )}
+                        {!r._notes && !r.barrelCount && <span className="detail-value">-</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="cell-date">{safeDate(r._createdAt || r.requestedAt || r.createdAt)}</span>
+                    </td>
+                    <td>
+                      <div className="cell-actions">
+                        {r._type === 'SELL' && (
+                          <>
+                            <button
+                              onClick={() => openAssignDelivery(r._id)}
+                              disabled={assignedRequests.has(r._id)}
+                              className="action-btn action-btn-assign"
+                            >
+                              <i className="fas fa-truck" />
+                              {assignedRequests.has(r._id) ? 'Assigned' : 'Assign'}
+                            </button>
+                            <button
+                              disabled={verifyingId === r._id}
+                              onClick={() => verify(r._id)}
+                              className="action-btn action-btn-verify"
+                            >
+                              <i className="fas fa-check-circle" />
+                              {verifyingId === r._id ? 'Verifying...' : 'Verify'}
+                            </button>
+                          </>
+                        )}
+                        {r._type === 'SELL_BARRELS' && (
+                          <button
+                            onClick={() => approve(r._id)}
+                            disabled={approvedRequests.has(r._id)}
+                            className="action-btn action-btn-approve"
+                          >
+                            <i className="fas fa-thumbs-up" />
+                            {approvedRequests.has(r._id) ? 'Approved' : 'Approve'}
+                          </button>
+                        )}
+                        {r._type !== 'SELL' && r._type !== 'SELL_BARRELS' && (
+                          <button
+                            onClick={() => alert(`View ${r._type} request details`)}
+                            className="action-btn action-btn-details"
+                          >
+                            <i className="fas fa-info-circle" />
+                            Details
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {showHistory && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <div className="modal-title">
+                <div className="modal-title-icon">
+                  <i className="fas fa-history" />
+                </div>
+                <h3>Sell Requests History</h3>
+              </div>
+              <button
+                onClick={() => setShowHistory(false)}
+                className="modal-close-btn"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={loadHistory}
+                  disabled={historyLoading}
+                  className="btn btn-secondary"
+                  style={{ padding: '8px 14px', fontSize: '13px' }}
+                >
+                  <i className="fas fa-sync-alt" />
+                  {historyLoading ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
+              <table className="history-table">
                 <thead>
                   <tr>
                     <th>User</th>
@@ -579,11 +1031,23 @@ const ManagerSellRequests = () => {
                       <td>{r.user}</td>
                       <td>{r.staff}</td>
                       <td>{r.date ? new Date(r.date).toLocaleString() : '-'}</td>
-                      <td>{r.status}</td>
+                      <td>
+                        <span className={`status-badge ${
+                          r.status?.toLowerCase() === 'pending' ? 'pending' :
+                          r.status?.toLowerCase() === 'approved' ? 'approved' :
+                          r.status?.toLowerCase() === 'assigned' ? 'assigned' : 'default'
+                        }`}>
+                          {r.status}
+                        </span>
+                      </td>
                     </tr>
                   ))}
                   {historyRows.length === 0 && (
-                    <tr><td colSpan={4} style={{ textAlign:'center', color:'#6b7280' }}>{historyLoading ? 'Loading...' : 'No history found'}</td></tr>
+                    <tr>
+                      <td colSpan={4} className="empty-table-message">
+                        {historyLoading ? 'Loading...' : 'No history found'}
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
@@ -591,134 +1055,36 @@ const ManagerSellRequests = () => {
           </div>
         </div>
       )}
-      </div>
 
-      <div style={{ overflowX:'auto' }}>
-        <table className="dashboard-table" style={{ minWidth: 700, tableLayout:'fixed', width:'100%' }}>
-          <thead>
-            <tr>
-              <th style={{ width:'28%' }}>User</th>
-              <th style={{ width:'10%' }}>Type</th>
-              <th>Status</th>
-              <th>Requested</th>
-              <th>Barrels</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(r => (
-              <tr key={r._id}>
-                <td style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{displayFarmer(r)}</td>
-                <td style={{ whiteSpace:'nowrap' }}>
-                  <span style={{ 
-                    padding: '4px 8px', 
-                    borderRadius: '4px', 
-                    fontSize: '12px',
-                    backgroundColor: r._type === 'LATEX' ? '#e3f2fd' : 
-                                   r._type === 'BARREL' ? '#f3e5f5' :
-                                   r._type === 'SELL_BARRELS' ? '#e8f5e8' :
-                                   r._type === 'CHEMICAL' ? '#fff3e0' : '#e8f5e8',
-                    color: r._type === 'LATEX' ? '#1976d2' :
-                           r._type === 'BARREL' ? '#7b1fa2' :
-                           r._type === 'SELL_BARRELS' ? '#388e3c' :
-                           r._type === 'CHEMICAL' ? '#f57c00' : '#388e3c'
-                  }}>
-                    {r._type}
-                  </span>
-                </td>
-                <td>{r.status}</td>
-                <td>{safeDate(r._createdAt || r.requestedAt || r.createdAt)}</td>
-                <td>
-                  {r._type === 'SELL_BARRELS' ? (
-                    <span>BC: {r.barrelCount ?? '-'}</span>
-                  ) : (
-                    <span>-</span>
-                  )}
-                </td>
-                <td>
-                  <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                    {r._type === 'SELL' && (
-                      <>
-                        <button onClick={() => openAssignDelivery(r._id)}>Assign Delivery</button>
-                        <button disabled={verifyingId===r._id} onClick={() => verify(r._id)}>{verifyingId===r._id? 'Verifying...' : 'Mark Verified'}</button>
-                      </>
-                    )}
-                    {r._type === 'SELL_BARRELS' && (
-                      <>
-                        <span style={{ alignSelf:'center', color:'#2563eb' }}>CB: {r.companyBarrel || '-'}</span>
-                        <button 
-                          disabled={approvingId===r._id || approvedRequests.has(r._id)} 
-                          onClick={() => approve(r._id)}
-                          style={{
-                            backgroundColor: approvedRequests.has(r._id) ? '#ccc' : '#4CAF50',
-                            color: approvedRequests.has(r._id) ? '#666' : 'white',
-                            cursor: approvedRequests.has(r._id) ? 'not-allowed' : 'pointer'
-                          }}
-                        >
-                          {approvedRequests.has(r._id) ? 'Approved ✅' : (approvingId===r._id ? 'Approving...' : 'Approve')}
-                        </button>
-                        <button 
-                          disabled={assignedRequests.has(r._id)}
-                          onClick={() => openAssignDelivery(r._id)}
-                          style={{
-                            backgroundColor: assignedRequests.has(r._id) ? '#ccc' : '#4CAF50',
-                            color: assignedRequests.has(r._id) ? '#666' : 'white',
-                            cursor: assignedRequests.has(r._id) ? 'not-allowed' : 'pointer'
-                          }}
-                        >
-                          {assignedRequests.has(r._id) ? 'Assigned 🚚' : 'Assign Delivery'}
-                        </button>
-                      </>
-                    )}
-                    {r._type !== 'SELL' && r._type !== 'SELL_BARRELS' && (
-                      <button onClick={() => alert(`View ${r._type} request details`)}>View Details</button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan={5} style={{ textAlign:'center', color:'#6b7280' }}>No user requests found. Use Refresh. If issue persists, check API route permissions.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-
-      {/* Simple Delivery Staff Selection Modal */}
+      {/* Assign Staff Modal */}
       {showAssignModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '20px',
-            borderRadius: '8px',
-            minWidth: '300px',
-            maxWidth: '500px'
-          }}>
-            <h3>Assign Delivery Staff</h3>
-            <p>Select a delivery staff member:</p>
-            
-            <div style={{ marginBottom: '15px' }}>
-              <select 
-                value={selectedStaff} 
-                onChange={(e) => setSelectedStaff(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px'
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <div className="modal-title">
+                <div className="modal-title-icon">
+                  <i className="fas fa-user-plus" />
+                </div>
+                <h3>Assign Delivery Staff</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAssignModal(false);
+                  setSelectedStaff('');
+                  setAssignDeliveryId(null);
                 }}
+                className="modal-close-btn"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <p>Select a delivery staff member to assign this request:</p>
+              <select
+                value={selectedStaff}
+                onChange={(e) => setSelectedStaff(e.target.value)}
+                className="modal-select"
               >
                 <option value="">Choose delivery staff...</option>
                 {staffLoading && <option value="" disabled>Loading...</option>}
@@ -728,40 +1094,31 @@ const ManagerSellRequests = () => {
                 {!staffLoading && !staffList.length && <option value="" disabled>No delivery staff found</option>}
               </select>
               {staffError && (
-                <div style={{ color: 'tomato', marginTop: 6 }}>{staffError}</div>
+                <div className="alert alert-error">
+                  <i className="fas fa-exclamation-circle" />
+                  {staffError}
+                </div>
               )}
-            </div>
-            
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button 
-                onClick={() => {
-                  setShowAssignModal(false);
-                  setSelectedStaff('');
-                  setAssignDeliveryId(null);
-                }}
-                style={{
-                  padding: '8px 16px',
-                  border: '1px solid #ccc',
-                  backgroundColor: 'white',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmAssignDelivery}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#4CAF50',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Assign
-              </button>
+              <div className="modal-actions">
+                <button
+                  onClick={() => {
+                    setShowAssignModal(false);
+                    setSelectedStaff('');
+                    setAssignDeliveryId(null);
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmAssignDelivery}
+                  disabled={!selectedStaff}
+                  className="btn btn-primary"
+                >
+                  <i className="fas fa-check" />
+                  Assign Staff
+                </button>
+              </div>
             </div>
           </div>
         </div>

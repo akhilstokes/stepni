@@ -1,470 +1,326 @@
-
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { listMyTasks, updateStatus } from '../../services/deliveryService';
 import './DeliveryDashboard.css';
 
+const StatusBadge = ({ s }) => (
+  <span className={`badge status-${String(s).replace(/_/g,'-')}`}>{s}</span>
+);
+
 const DeliveryDashboard = () => {
-  const [deliveryStats, setDeliveryStats] = useState({
-    todayDeliveries: 0,
-    todayPickups: 0,
-    completedTasks: 0,
-    pendingTasks: 0,
-    totalEarnings: 0
-  });
-
-  const [assignedTasks, setAssignedTasks] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [error, setError] = useState(null);
+  const [shiftInfo, setShiftInfo] = useState(null);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchDeliveryStats();
-    fetchAssignedTasks();
-    getCurrentLocation();
+  const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  
+  const authHeaders = () => {
+    const token = localStorage.getItem('token');
+    return token ? { 
+      Authorization: `Bearer ${token}`, 
+      'Content-Type': 'application/json' 
+    } : { 
+      'Content-Type': 'application/json' 
+    };
+  };
+
+  const load = async () => {
+    try { 
+      // Load both delivery tasks and assigned sell requests
+      const [deliveryTasks, assignedRequests] = await Promise.all([
+        loadDeliveryTasks(),
+        loadAssignedSellRequests()
+      ]);
+      
+      // Combine both types of tasks
+      const allTasks = [...deliveryTasks, ...assignedRequests];
+      setTasks(allTasks);
+      
+      // Load shift info separately
+      await loadShiftInfo();
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      setTasks([]);
+    } finally { 
+      setLoading(false); 
+    }
+  };
+
+  const loadDeliveryTasks = async () => {
+    try {
+      const tasks = await listMyTasks();
+      return tasks;
+    } catch (error) {
+      console.error('Error loading delivery tasks:', error);
+      return [];
+    }
+  };
+
+  const loadAssignedSellRequests = async () => {
+    try {
+      const response = await fetch(`${API}/api/sell-requests/delivery/my-assigned`, {
+        headers: authHeaders()
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const assigned = Array.isArray(data?.records) ? data.records : (Array.isArray(data) ? data : []);
+        return assigned.map(r => ({
+          _id: `sr_${r._id}`,
+          title: r._type ? `${r._type} Pickup` : (r.barrelCount != null ? `Sell Request Pickup (${r.barrelCount})` : 'Sell Request Pickup'),
+          status: r.status || 'DELIVER_ASSIGNED',
+          scheduledAt: r.assignedAt || r.updatedAt || r.createdAt,
+          createdAt: r.createdAt,
+          customerUserId: r.farmerId,
+          pickupAddress: r.capturedAddress || 'Customer pickup location',
+          dropAddress: 'HFP Lab / Yard',
+          meta: {
+            barrelCount: r.barrelCount,
+            sellRequestId: r._id
+          },
+          isSellRequest: true
+        }));
+      }
+      return [];
+    } catch (error) {
+      console.error('Error loading assigned sell requests:', error);
+      return [];
+    }
+  };
+
+  const loadShiftInfo = async () => {
+    try {
+      const response = await fetch(`${API}/api/delivery/shift-schedule`, {
+        headers: authHeaders()
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setShiftInfo(data.myAssignment);
+      }
+    } catch (error) {
+      console.error('Error loading shift info:', error);
+    }
+  };
+
+  useEffect(() => { 
+    load(); 
   }, []);
 
-  const fetchDeliveryStats = async () => {
-    try {
-      setError(null);
-      // API call to fetch delivery statistics
-      const response = await fetch('/api/delivery/stats', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setDeliveryStats(data);
-      } else {
-        // Show zero stats when API is not available
-        setDeliveryStats({
-          todayDeliveries: 0,
-          todayPickups: 0,
-          completedTasks: 0,
-          pendingTasks: 0,
-          totalEarnings: 0
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching delivery stats:', error);
-      setError('Failed to load delivery statistics - API not available');
-      // Show zero stats when API fails
-      setDeliveryStats({
-        todayDeliveries: 0,
-        todayPickups: 0,
-        completedTasks: 0,
-        pendingTasks: 0,
-        totalEarnings: 0
-      });
-    }
+  const quickAction = async (t, next) => {
+    await updateStatus(t._id, { status: next });
+    await load();
   };
 
-  const fetchAssignedTasks = async () => {
-    try {
-      setError(null);
-      // API call to fetch assigned tasks
-      const response = await fetch('/api/delivery/tasks/assigned', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAssignedTasks(data.tasks || []);
-      } else {
-        // No fallback data - show empty state when API is not available
-        setAssignedTasks([]);
-      }
-    } catch (error) {
-      console.error('Error fetching assigned tasks:', error);
-      setError('Failed to load assigned tasks - API not available');
-      // No fallback data - show empty state
-      setAssignedTasks([]);
-    } finally {
-      setLoading(false);
+  const deliverToLab = async (t) => {
+    // follow allowed transitions to avoid 400s
+    const order = ['pickup_scheduled','enroute_pickup','picked_up','enroute_drop','delivered'];
+    const idx = Math.max(order.indexOf(t.status), 0);
+    for (let i = idx + 1; i < order.length; i++) {
+      await updateStatus(t._id, { status: order[i] });
     }
-  };
-
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCurrentLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            timestamp: new Date().toISOString()
-          });
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          // No fallback location - let user know location is unavailable
-          setCurrentLocation(null);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutes
-        }
-      );
-    } else {
-      // No geolocation support - location unavailable
-      setCurrentLocation(null);
+    const sellReqId = t?.meta?.sellRequestId;
+    if (sellReqId) {
+      try { 
+        await fetch(`${API}/api/sell-requests/${sellReqId}/deliver-to-lab`, { 
+          method: 'PUT', 
+          headers: authHeaders() 
+        }); 
+      } catch {}
     }
-  };
-
-  const handleTaskAction = async (taskId, action) => {
+    // Notify lab staff instead of navigating to lab pages
     try {
-      const response = await fetch(`/api/delivery/tasks/${taskId}/${action}`, {
+      const customer = t?.customerUserId?.name || t?.customerUserId?.email || '';
+      const count = t?.meta?.barrelCount ?? '';
+      const sampleId = sellReqId || t?._id;
+      await fetch(`${API}/api/notifications/staff-trip-event`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
+        headers: authHeaders(),
         body: JSON.stringify({
-          timestamp: new Date().toISOString(),
-          location: currentLocation
+          title: 'Delivery to Lab',
+          message: `Sample ${String(sampleId)} delivered by delivery staff`,
+          link: '/lab/check-in',
+          meta: {
+            sampleId: String(sampleId),
+            sellRequestId: sellReqId || undefined,
+            intakeId: !sellReqId ? String(t?._id) : undefined,
+            barrelCount: String(count),
+            customer,
+            barrels: Array.isArray(t?.meta?.barrels) ? t.meta.barrels.map(id => ({ barrelId: id })) : undefined
+          },
+          targetRole: 'lab'
         })
       });
+    } catch (_) {}
+    await load();
+    alert('Lab has been notified.');
+  };
 
-      if (response.ok) {
-        // Refresh tasks after action
-        await fetchAssignedTasks();
-        await fetchDeliveryStats();
-      } else {
-        setError(`Failed to ${action} task`);
-      }
-    } catch (error) {
-      console.error(`Error ${action} task:`, error);
-      setError(`Failed to ${action} task`);
+  const setBarrelIds = async (t) => {
+    const existing = Array.isArray(t?.meta?.barrels) ? t.meta.barrels.join(',') : '';
+    const input = window.prompt('Enter Barrel IDs (comma separated):', existing);
+    if (input == null) return;
+    const ids = input.split(',').map(s=>s.trim()).filter(Boolean);
+    try { 
+      await updateStatus(t._id, { meta: { barrels: ids } }); 
+      await load(); 
+    } catch (e) { 
+      alert(e?.message || 'Failed to save barrel IDs'); 
     }
   };
 
-  const refreshData = async () => {
-    setLoading(true);
-    await Promise.all([
-      fetchDeliveryStats(),
-      fetchAssignedTasks(),
-    ]);
-    getCurrentLocation();
+  const handleSellRequestAction = async (t, action) => {
+    try {
+      if (action === 'start_pickup') {
+        // Update sell request status to indicate pickup started
+        const response = await fetch(`${API}/api/sell-requests/${t.meta.sellRequestId}/status`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify({ status: 'PICKUP_STARTED' })
+        });
+        if (response.ok) {
+          await load(); // Reload to show updated status
+        }
+      } else if (action === 'mark_picked') {
+        // Mark as collected
+        const response = await fetch(`${API}/api/sell-requests/${t.meta.sellRequestId}/collected`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify({ 
+            totalVolumeKg: t.meta.barrelCount || 0,
+            notes: 'Collected by delivery staff'
+          })
+        });
+        if (response.ok) {
+          await load(); // Reload to show updated status
+        }
+      } else if (action === 'deliver_to_lab') {
+        // Mark as delivered to lab
+        const response = await fetch(`${API}/api/sell-requests/${t.meta.sellRequestId}/delivered-to-lab`, {
+          method: 'PUT',
+          headers: authHeaders()
+        });
+        if (response.ok) {
+          await load(); // Reload to show updated status
+        }
+      }
+    } catch (error) {
+      console.error('Error handling sell request action:', error);
+      alert('Failed to update sell request status');
+    }
   };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      assigned: 'status-assigned',
-      in_progress: 'status-progress',
-      completed: 'status-completed',
-      cancelled: 'status-cancelled'
-    };
-    return colors[status] || 'status-default';
-  };
-
-  const getPriorityColor = (priority) => {
-    const colors = {
-      high: 'priority-high',
-      medium: 'priority-medium',
-      low: 'priority-low'
-    };
-    return colors[priority] || 'priority-default';
-  };
-
-  const getTaskIcon = (type) => {
-    return type === 'delivery' ? 'fa-truck' : 'fa-box-open';
-  };
-
-  if (loading) {
-    return (
-      <div className="delivery-dashboard">
-        <div className="loading-spinner">
-          <i className="fas fa-spinner fa-spin"></i>
-          <p>Loading delivery dashboard...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="delivery-dashboard">
-      {error && (
-        <div className="error-banner">
-          <i className="fas fa-exclamation-triangle"></i>
-          <span>{error}</span>
-          <button onClick={refreshData} className="retry-btn">
-            <i className="fas fa-sync"></i>
-            Retry
-          </button>
+    <div>
+      <h2>Delivery Dashboard</h2>
+      
+      {/* Shift Information */}
+      {shiftInfo && (
+        <div style={{ 
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+          color: 'white', 
+          padding: '20px', 
+          borderRadius: '12px', 
+          marginBottom: '20px',
+          textAlign: 'center'
+        }}>
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '20px' }}>
+            <i className="fas fa-clock" style={{ marginRight: '8px' }}></i>
+            Today's Shift: {shiftInfo.name}
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '10px' }}>
+            <div>
+              <div style={{ fontSize: '14px', opacity: 0.9 }}>Start Time</div>
+              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{shiftInfo.startTime}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '14px', opacity: 0.9 }}>End Time</div>
+              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{shiftInfo.endTime}</div>
+            </div>
+          </div>
+          <div style={{ fontSize: '14px', opacity: 0.9 }}>
+            Duration: {shiftInfo.duration} | Grace Period: {shiftInfo.gracePeriod} minutes
+          </div>
         </div>
       )}
 
-      <div className="welcome-section">
-        <h1>🚚 Delivery Dashboard</h1>
-        <p>Manage your deliveries, pickups, and navigation</p>
-        <button onClick={refreshData} className="refresh-btn">
-          <i className="fas fa-sync"></i>
-          Refresh Data
-        </button>
-      </div>
-
-      {/* Stats Overview */}
-      <div className="stats-overview">
-        <Link to="/delivery/today-deliveries" className="stat-card stat-deliveries">
-          <div className="stat-icon">
-            <i className="fas fa-truck"></i>
-          </div>
-          <div className="stat-content">
-            <h3>{deliveryStats.todayDeliveries}</h3>
-            <p>Today's Deliveries</p>
-          </div>
-        </Link>
-
-        <Link to="/delivery/today-pickups" className="stat-card stat-pickups">
-          <div className="stat-icon">
-            <i className="fas fa-box-open"></i>
-          </div>
-          <div className="stat-content">
-            <h3>{deliveryStats.todayPickups}</h3>
-            <p>Today's Pickups</p>
-          </div>
-        </Link>
-
-        <Link to="/delivery/pending-tasks" className="stat-card stat-pending">
-          <div className="stat-icon">
-            <i className="fas fa-clock"></i>
-          </div>
-          <div className="stat-content">
-            <h3>{deliveryStats.pendingTasks}</h3>
-            <p>Pending Tasks</p>
-          </div>
-        </Link>
-
-        <Link to="/delivery/salary" className="stat-card stat-earnings">
-          <div className="stat-icon">
-            <i className="fas fa-rupee-sign"></i>
-          </div>
-          <div className="stat-content">
-            <h3>₹{deliveryStats.totalEarnings}</h3>
-            <p>Today's Earnings</p>
-          </div>
-        </Link>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="quick-actions">
-        <h2>Quick Actions</h2>
-        <div className="actions-grid">
-          <Link to="/delivery/barrel-scan" className="action-card action-scan">
-            <div className="action-icon">
-              <i className="fas fa-qrcode"></i>
-            </div>
-            <div className="action-content">
-              <h3>Scan Barrels</h3>
-              <p>Scan barrel IDs during pickup/delivery</p>
-            </div>
-          </Link>
-
-          <Link to="/delivery/vehicle-info" className="action-card action-vehicle">
-            <div className="action-icon">
-              <i className="fas fa-car"></i>
-            </div>
-            <div className="action-content">
-              <h3>Vehicle Information</h3>
-              <p>Enter/update vehicle number</p>
-            </div>
-          </Link>
-
-          <Link to="/delivery/live-location" className="action-card action-navigation">
-            <div className="action-icon">
-              <i className="fas fa-map-marker-alt"></i>
-            </div>
-            <div className="action-content">
-              <h3>Live Location</h3>
-              <p>Track and share your location</p>
-            </div>
-          </Link>
-
-          <Link to="/delivery/task-history" className="action-card action-history">
-            <div className="action-icon">
-              <i className="fas fa-history"></i>
-            </div>
-            <div className="action-content">
-              <h3>Task History</h3>
-              <p>View completed deliveries</p>
-            </div>
-          </Link>
-        </div>
-      </div>
-
-      {/* Assigned Tasks */}
-      <div className="assigned-tasks">
-        <h2>Today's Assigned Tasks</h2>
-        {assignedTasks.length === 0 ? (
-          <div className="no-tasks">
-            <i className="fas fa-clipboard-list"></i>
-            <h3>No tasks assigned</h3>
-            <p>Check back later for new assignments</p>
-          </div>
-        ) : (
-          <div className="tasks-list">
-            {assignedTasks.map(task => (
-              <div key={task.id} className="task-card">
-                <div className="task-header">
-                  <div className="task-info">
-                    <div className="task-type">
-                      <i className={`fas ${getTaskIcon(task.type)}`}></i>
-                      <span>{task.type.toUpperCase()}</span>
-                    </div>
-                    <div className={`priority-badge ${getPriorityColor(task.priority)}`}>
-                      {task.priority.toUpperCase()}
-                    </div>
-                  </div>
-                  <div className={`status-badge ${getStatusColor(task.status)}`}>
-                    {task.status.replace('_', ' ').toUpperCase()}
-                  </div>
-                </div>
-
-                <div className="task-body">
-                  <h3>{task.title}</h3>
-                  
-                  <div className="customer-info">
-                    <div className="customer-details">
-                      <p><i className="fas fa-user"></i> {task.customer.name}</p>
-                      <p><i className="fas fa-phone"></i> {task.customer.phone}</p>
-                      <p><i className="fas fa-map-marker-alt"></i> {task.customer.address}</p>
-                    </div>
-                  </div>
-
-                  <div className="task-details">
-                    <div className="detail-item">
-                      <span className="label">Scheduled:</span>
-                      <span className="value">{new Date(task.scheduledTime).toLocaleString()}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="label">Duration:</span>
-                      <span className="value">{task.estimatedDuration}</span>
-                    </div>
-                    {task.type === 'delivery' && task.barrels && task.barrels.length > 0 && (
-                      <div className="detail-item">
-                        <span className="label">Barrels:</span>
-                        <div className="barrel-list">
-                          {task.barrels.map(barrelId => (
-                            <span key={barrelId} className="barrel-id">{barrelId}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {task.type === 'pickup' && task.quantity && (
-                      <div className="detail-item">
-                        <span className="label">Quantity:</span>
-                        <span className="value">{task.quantity} barrels</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="task-actions">
-                  {task.status === 'assigned' && (
-                    <button 
-                      className="btn btn-primary"
-                      onClick={() => handleTaskAction(task.id, 'start')}
-                    >
-                      <i className="fas fa-play"></i>
-                      Start Task
-                    </button>
-                  )}
-                  {task.status === 'in_progress' && (
-                    <button 
-                      className="btn btn-success"
-                      onClick={() => handleTaskAction(task.id, 'complete')}
-                    >
-                      <i className="fas fa-check"></i>
-                      Complete Task
-                    </button>
-                  )}
-                  {task.status === 'completed' && task.completedTime && (
-                    <div className="completed-info">
-                      <i className="fas fa-check-circle"></i>
-                      Completed at {new Date(task.completedTime).toLocaleString()}
-                    </div>
-                  )}
-                  
-                  <div className="navigation-buttons">
-                    <a 
-                      href={task.customer.location} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="btn btn-secondary"
-                    >
-                      <i className="fas fa-map"></i>
-                      Google Maps
-                    </a>
-                    <a 
-                      href={`https://wa.me/?text=Location: ${task.customer.location}`}
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="btn btn-secondary"
-                    >
-                      <i className="fab fa-whatsapp"></i>
-                      WhatsApp
-                    </a>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Current Location */}
-      {currentLocation ? (
-        <div className="location-info">
-          <h3>📍 Current Location</h3>
-          <p>
-            Lat: {currentLocation.lat.toFixed(6)}, Lng: {currentLocation.lng.toFixed(6)}
-            {currentLocation.accuracy && (
-              <span className="accuracy"> (±{Math.round(currentLocation.accuracy)}m)</span>
-            )}
-          </p>
-          <p className="location-timestamp">
-            Last updated: {new Date(currentLocation.timestamp).toLocaleString()}
-          </p>
-          <div className="location-actions">
-            <a 
-              href={`https://maps.google.com/?q=${currentLocation.lat},${currentLocation.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-primary"
-            >
-              <i className="fas fa-map-marker-alt"></i>
-              View on Map
-            </a>
-            <button 
-              onClick={getCurrentLocation}
-              className="btn btn-secondary"
-            >
-              <i className="fas fa-sync"></i>
-              Update Location
-            </button>
-          </div>
-        </div>
+      {loading ? <p>Loading...</p> : tasks.length === 0 ? (
+        <div className="no-data">No assigned tasks</div>
       ) : (
-        <div className="location-info">
-          <h3>📍 Location Unavailable</h3>
-          <p>Location access is not available or denied</p>
-          <div className="location-actions">
-            <button 
-              onClick={getCurrentLocation}
-              className="btn btn-primary"
-            >
-              <i className="fas fa-map-marker-alt"></i>
-              Enable Location
-            </button>
-          </div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Title</th>
+                <th>Customer</th>
+                <th>Barrels</th>
+                <th>Pickup</th>
+                <th>Drop</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tasks.map(t => (
+                <tr key={t._id} style={{ backgroundColor: t.isSellRequest ? '#f8f9fa' : 'inherit' }}>
+                  <td>{t.scheduledAt ? new Date(t.scheduledAt).toLocaleString('en-IN') : '-'}</td>
+                  <td>
+                    {t.title}
+                    {t.isSellRequest && (
+                      <span style={{ 
+                        marginLeft: '8px', 
+                        padding: '2px 6px', 
+                        backgroundColor: '#e3f2fd', 
+                        color: '#1976d2', 
+                        borderRadius: '4px', 
+                        fontSize: '10px',
+                        fontWeight: 'bold'
+                      }}>
+                        SELL REQUEST
+                      </span>
+                    )}
+                  </td>
+                  <td>{t.customerUserId?.name || t.customerUserId?.email || '-'}</td>
+                  <td>{t?.meta?.barrelCount ?? '-'}</td>
+                  <td>{t.pickupAddress}</td>
+                  <td>{t.dropAddress}</td>
+                  <td><StatusBadge s={t.status} /></td>
+                  <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {t.isSellRequest ? (
+                      // Actions for sell request assignments
+                      <>
+                        <button className="btn" onClick={()=>handleSellRequestAction(t, 'start_pickup')}>Start Pickup</button>
+                        <button className="btn-secondary" onClick={()=>handleSellRequestAction(t, 'mark_picked')}>Mark Picked</button>
+                        <button className="btn-secondary" onClick={()=>handleSellRequestAction(t, 'deliver_to_lab')}>Deliver to Lab</button>
+                        <button className="btn-secondary" onClick={()=>deliverToLab(t)}>Notify Lab</button>
+                      </>
+                    ) : (
+                      // Actions for regular delivery tasks
+                      <>
+                        {t.status === 'pickup_scheduled' && (
+                          <button className="btn-secondary" onClick={()=>quickAction(t,'enroute_pickup')}>Start Pickup</button>
+                        )}
+                        {t.status === 'enroute_pickup' && (
+                          <button className="btn" onClick={()=>quickAction(t,'picked_up')}>Mark Picked</button>
+                        )}
+                        {t.status === 'picked_up' && (
+                          <button className="btn-secondary" onClick={()=>quickAction(t,'enroute_drop')}>Start Drop</button>
+                        )}
+                        {t.status === 'enroute_drop' && (
+                          <button className="btn" onClick={()=>quickAction(t,'delivered')}>Mark Delivered</button>
+                        )}
+                        {t.status !== 'delivered' && (
+                          <button className="btn-secondary" onClick={()=>deliverToLab(t)}>Delivered to Lab</button>
+                        )}
+                        <button className="btn-secondary" onClick={()=>setBarrelIds(t)}>Set Barrel IDs</button>
+                        <button className="btn-secondary" onClick={()=>deliverToLab(t)}>Notify Lab</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
@@ -472,4 +328,3 @@ const DeliveryDashboard = () => {
 };
 
 export default DeliveryDashboard;
-

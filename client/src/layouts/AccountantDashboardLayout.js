@@ -5,8 +5,9 @@ import { useAuth } from '../context/AuthContext';
 
 const AccountantDashboardLayout = ({ children }) => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [sidebarOpen] = useState(true);
+  const [notificationCount] = useState(1);
   const menuRef = useRef(null);
 
   const handleLogout = async () => {
@@ -48,10 +49,18 @@ const AccountantDashboardLayout = ({ children }) => {
       <div className="main-content-wrapper">
         <header className="dashboard-header" style={{ justifyContent: 'flex-end' }}>
           <div className="user-header-actions">
+            {/* Notification Button */}
+            <button className="notification-btn" onClick={() => navigate('/accountant/notifications')}>
+              <i className="fas fa-bell"></i>
+              {notificationCount > 0 && (
+                <div className="notification-badge">{notificationCount}</div>
+              )}
+            </button>
+
             <div className="profile-menu" ref={menuRef}>
-              <button type="button" className="profile-link" onClick={() => {}}>
+              <button type="button" className="profile-link" onClick={() => navigate('/accountant/profile')}>
                 <i className="fas fa-user-circle" />
-                <span>Profile</span>
+                <span>{user?.name || 'Accountant'}</span>
               </button>
             </div>
             <button className="logout-button" onClick={handleLogout}>Logout</button>

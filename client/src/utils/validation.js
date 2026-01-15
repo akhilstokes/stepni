@@ -313,111 +313,42 @@ export const validators = {
     
     return null;
   },
-
-  // Role validation
-  role: (value) => {
-    const validRoles = ['admin', 'manager', 'user', 'accountant', 'lab', 'field_staff', 'delivery'];
-    
-    if (!value) return 'Role is required';
-    
-    if (!validRoles.includes(value.toLowerCase())) {
-      return `Role must be one of: ${validRoles.join(', ')}`;
-    }
-    
-    return null;
-  },
-
+  
   // Barrel count validation
-  barrelCount: (value) => {
+  barrelCount: (value, fieldName = 'Barrel Count') => {
     if (!value) return null;
     
-    const numValue = parseInt(value);
+    const numValue = parseInt(value, 10);
     
     if (isNaN(numValue)) {
-      return 'Barrel count must be a valid number';
+      return `${fieldName} must be a valid number`;
     }
     
-    if (numValue < 0) {
-      return 'Barrel count cannot be negative';
+    if (numValue <= 0) {
+      return `${fieldName} must be greater than 0`;
     }
     
-    if (numValue > 1000) {
-      return 'Barrel count cannot exceed 1000';
-    }
-    
-    return null;
-  },
-
-  // Sample ID validation
-  sampleId: (value) => {
-    if (!value) return null;
-    
-    if (!validationPatterns.sampleId.test(value)) {
-      return 'Sample ID can only contain uppercase letters, numbers, and hyphens';
-    }
-    
-    if (value.length < 3) {
-      return 'Sample ID must be at least 3 characters long';
-    }
-    
-    if (value.length > 20) {
-      return 'Sample ID cannot exceed 20 characters';
+    if (numValue > 10000) {
+      return `${fieldName} cannot exceed 10,000`;
     }
     
     return null;
   }
 };
-
-// Form validation helper
-export const validateForm = (formData, validationRules) => {
-  const errors = {};
-  
-  Object.keys(validationRules).forEach(field => {
-    const rules = validationRules[field];
-    const value = formData[field];
-    
-    for (const rule of rules) {
-      const error = rule(value, field);
-      if (error) {
-        errors[field] = error;
-        break; // Stop at first error for this field
-      }
-    }
-  });
-  
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors
-  };
-};
-
-// Real-time validation helper
-export const validateField = (value, rules, fieldName) => {
-  for (const rule of rules) {
-    const error = rule(value, fieldName);
-    if (error) {
-      return error;
-    }
-  }
-  return null;
-};
-
-// Common validation rule sets
+// Common validation rules for forms
 export const commonValidationRules = {
-  // Login form
-  login: {
-    email: [validators.required, validators.email],
-    password: [validators.required]
-  },
-  
   // User registration
   userRegistration: {
     name: [validators.required, validators.name],
     email: [validators.required, validators.email],
     phoneNumber: [validators.required, validators.phone],
-    password: [validators.required, validators.password],
-    confirmPassword: [validators.required],
-    role: [validators.required, validators.role]
+    password: [validators.required, validators.password]
+  },
+  
+  // Login
+  login: {
+    email: [validators.required, validators.email],
+    password: [validators.required]
   },
   
   // Latex request
@@ -449,6 +380,42 @@ export const commonValidationRules = {
     drcPercentage: [validators.required, validators.drcPercentage],
     quantity: [validators.required, validators.quantity]
   }
+};
+
+// Validate a single field against an array of validation rules
+export const validateField = (value, rules = [], fieldName = 'Field', formData = {}) => {
+  if (!Array.isArray(rules)) {
+    console.warn('validateField: rules must be an array');
+    return null;
+  }
+  
+  for (const rule of rules) {
+    if (typeof rule === 'function') {
+      const error = rule(value, fieldName, formData);
+      if (error) return error;
+    }
+  }
+  
+  return null;
+};
+
+// Validate an entire form against validation rules
+export const validateForm = (formData = {}, rules = {}) => {
+  const errors = {};
+  let isValid = true;
+  
+  Object.keys(rules).forEach(fieldName => {
+    const fieldRules = rules[fieldName];
+    const fieldValue = formData[fieldName];
+    const error = validateField(fieldValue, fieldRules, fieldName, formData);
+    
+    if (error) {
+      errors[fieldName] = error;
+      isValid = false;
+    }
+  });
+  
+  return { isValid, errors };
 };
 
 // Compatibility wrappers / convenience helpers
@@ -490,8 +457,7 @@ export const cleanPhoneNumber = (phone = '') => {
   return digits;
 };
 
-export default {
-  validationPatterns,
+export default {  validationPatterns,
   validators,
   validateForm,
   validateField,

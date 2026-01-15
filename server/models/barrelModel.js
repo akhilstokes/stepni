@@ -6,7 +6,7 @@ const barrelSchema = new mongoose.Schema(
     barrelId: { type: String, required: true, unique: true, index: true },
     capacity: { type: Number, required: true, min: 1 }, // liters
     currentVolume: { type: Number, default: 0, min: 0 }, // liters
-    status: { type: String, enum: ['in-use', 'in-storage', 'disposed'], default: 'in-storage' },
+    status: { type: String, enum: ['in-use', 'in-storage', 'disposed', 'picked_up', 'delivered', 'damaged', 'in_transit'], default: 'in-storage' },
     // Allocation owner (user/farmer) if assigned out by manager
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
@@ -37,6 +37,24 @@ const barrelSchema = new mongoose.Schema(
     readings: [
       { timestamp: { type: Date, default: Date.now }, volume: { type: Number, required: true, min: 0 } },
     ],
+
+    // Field staff tracking fields
+    lastScannedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    lastScannedAt: { type: Date },
+    location: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+      timestamp: { type: Date }
+    },
+    trackingHistory: [{
+      scannedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      status: { type: String },
+      location: {
+        latitude: { type: Number },
+        longitude: { type: Number }
+      },
+      timestamp: { type: Date, default: Date.now }
+    }]
   },
   { timestamps: true }
 );

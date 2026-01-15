@@ -1,474 +1,281 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useRoleTheme, RoleDashboardCard, RoleButton, StatusIndicator, FloatingPrompt } from '../common/RoleThemeProvider';
+import React, { useState, useRef, useEffect } from 'react';
+import './BarrelQRScanner.css';
 
-// QR Code Scanner Component for Field Staff
-export const BarrelQRScanner = ({ onBarrelScanned, onLocationUpdate }) => {
-    const { userRole, getRoleColor } = useRoleTheme();
-    const videoRef = useRef(null);
-    const canvasRef = useRef(null);
-    const [isScanning, setIsScanning] = useState(false);
-    const [scannedBarrels, setScannedBarrels] = useState([]);
-    const [currentLocation, setCurrentLocation] = useState(null);
-    const [scanningError, setScanningError] = useState('');
-    const [showPrompt, setShowPrompt] = useState(true);
+const BarrelQRScanner = ({ onBarrelScanned, onLocationUpdate }) => {
+  const [isScanning, setIsScanning] = useState(false);
+  const [scannedData, setScannedData] = useState(null);
+  const [manualEntry, setManualEntry] = useState('');
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [barrelStatus, setBarrelStatus] = useState('picked_up');
+  const [location, setLocation] = useState(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
-    useEffect(() => {
-        getCurrentLocation();
-    }, []);
+  useEffect(() => {
+    if (isScanning) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+    
+    return () => stopCamera();
+  }, [isScanning]);
 
-    const getCurrentLocation = () => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setCurrentLocation({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        accuracy: position.coords.accuracy
-                    });
-                },
-                (error) => {
-                    console.error('Error getting location:', error);
-                    setScanningError('Location access required for barrel tracking');
-                }
-            );
+  useEffect(() => {
+    // Get current location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
         }
-    };
+      );
+    }
+  }, []);
 
-    const startScanning = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment' } 
-            });
-            videoRef.current.srcObject = stream;
-            setIsScanning(true);
-            setScanningError('');
-        } catch (error) {
-            setScanningError('Camera access required for QR scanning');
-        }
-    };
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      alert('Unable to access camera. Please check permissions.');
+    }
+  };
 
-    const stopScanning = () => {
-        if (videoRef.current && videoRef.current.srcObject) {
-            videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-        }
-        setIsScanning(false);
-    };
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  };
 
-    const processQRCode = (data) => {
-        try {
-            // Parse barrel ID from QR code
-            const barrelId = data.trim();
-            
-            // Validate barrel ID format
-            if (!/^[A-Z0-9]{6,12}$/.test(barrelId)) {
-                throw new Error('Invalid barrel ID format');
-            }
+  const handleScan = (data) => {
+    if (data) {
+      setScannedData(data);
+      setIsScanning(false);
+      processBarrelData(data);
+    }
+  };
 
-            // Check if already scanned
-            if (scannedBarrels.some(barrel => barrel.barrelId === barrelId)) {
-                throw new Error('Barrel already scanned');
-            }
+  const handleManualEntry = () => {
+    if (manualEntry.trim()) {
+      setScannedData(manualEntry);
+      processBarrelData(manualEntry);
+      setManualEntry('');
+      setShowManualEntry(false);
+    }
+  };
 
-            const scannedBarrel = {
-                barrelId,
-                scannedAt: new Date(),
-                location: currentLocation,
-                status: 'scanned'
-            };
+  const processBarrelData = async (barrelId) => {
+    try {
+      // Simulate barrel data processing
+      const barrelData = {
+        id: barrelId,
+        status: barrelStatus,
+        location: location,
+        timestamp: new Date().toISOString(),
+        scannedBy: 'field_staff'
+      };
 
-            setScannedBarrels(prev => [...prev, scannedBarrel]);
-            onBarrelScanned?.(scannedBarrel);
-            
-            // Auto-stop scanning after successful scan
-            setTimeout(() => {
-                stopScanning();
-            }, 1000);
+      // Call parent callbacks
+      if (onBarrelScanned) {
+        onBarrelScanned(barrelData);
+      }
+      
+      if (onLocationUpdate) {
+        onLocationUpdate(barrelId, barrelStatus, location);
+      }
 
-        } catch (error) {
-            setScanningError(error.message);
-        }
-    };
+      // Send to backend
+      await updateBarrelStatus(barrelData);
+      
+    } catch (error) {
+      console.error('Error processing barrel data:', error);
+    }
+  };
 
-    const updateBarrelStatus = async (barrelId, status) => {
-        try {
-            const response = await fetch('/api/barrels/update-status', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    barrelId,
-                    status,
-                    location: currentLocation,
-                    timestamp: new Date().toISOString()
-                })
-            });
+  const updateBarrelStatus = async (barrelData) => {
+    try {
+      const response = await fetch('/api/field-staff/barrel-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(barrelData)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update barrel status');
+      }
+      
+      console.log('Barrel status updated successfully');
+    } catch (error) {
+      console.error('Error updating barrel status:', error);
+    }
+  };
 
-            if (!response.ok) {
-                throw new Error('Failed to update barrel status');
-            }
-
-            // Update local state
-            setScannedBarrels(prev => 
-                prev.map(barrel => 
-                    barrel.barrelId === barrelId 
-                        ? { ...barrel, status, updatedAt: new Date() }
-                        : barrel
-                )
-            );
-
-            onLocationUpdate?.(barrelId, status, currentLocation);
-
-        } catch (error) {
-            setScanningError(error.message);
-        }
-    };
-
-    const markAsDamaged = async (barrelId, damageType, severity) => {
-        try {
-            const response = await fetch('/api/barrels/report-damage', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    barrelId,
-                    damageType,
-                    severity,
-                    reportedBy: userRole,
-                    location: currentLocation,
-                    timestamp: new Date().toISOString()
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to report damage');
-            }
-
-            // Update local state
-            setScannedBarrels(prev => 
-                prev.map(barrel => 
-                    barrel.barrelId === barrelId 
-                        ? { ...barrel, status: 'damaged', damageType, severity }
-                        : barrel
-                )
-            );
-
-        } catch (error) {
-            setScanningError(error.message);
-        }
-    };
-
-    return (
-        <div className="barrel-qr-scanner">
-            <RoleDashboardCard 
-                title="Barrel QR Scanner" 
-                icon="fas fa-qrcode"
-                className="mb-6"
-            >
-                {/* Location Status */}
-                <div className="location-status mb-4">
-                    <StatusIndicator 
-                        status={currentLocation ? 'success' : 'error'}
-                    >
-                        {currentLocation ? 'Location Active' : 'Location Required'}
-                    </StatusIndicator>
-                    {currentLocation && (
-                        <span className="location-coords">
-                            {currentLocation.latitude.toFixed(6)}, {currentLocation.longitude.toFixed(6)}
-                        </span>
-                    )}
-                </div>
-
-                {/* Scanner Controls */}
-                <div className="scanner-controls mb-4">
-                    {!isScanning ? (
-                        <RoleButton onClick={startScanning} size="large">
-                            <i className="fas fa-camera"></i> Start Scanning
-                        </RoleButton>
-                    ) : (
-                        <RoleButton onClick={stopScanning} variant="outline" size="large">
-                            <i className="fas fa-stop"></i> Stop Scanning
-                        </RoleButton>
-                    )}
-                </div>
-
-                {/* Camera Feed */}
-                {isScanning && (
-                    <div className="camera-container mb-4">
-                        <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            className="camera-feed"
-                        />
-                        <canvas ref={canvasRef} style={{ display: 'none' }} />
-                    </div>
-                )}
-
-                {/* Error Display */}
-                {scanningError && (
-                    <div className="error-message mb-4">
-                        <i className="fas fa-exclamation-triangle"></i>
-                        {scanningError}
-                    </div>
-                )}
-
-                {/* Scanned Barrels List */}
-                <div className="scanned-barrels">
-                    <h4>Scanned Barrels ({scannedBarrels.length})</h4>
-                    {scannedBarrels.length === 0 ? (
-                        <p className="text-muted">No barrels scanned yet</p>
-                    ) : (
-                        <div className="barrel-list">
-                            {scannedBarrels.map((barrel, index) => (
-                                <div key={index} className="barrel-item">
-                                    <div className="barrel-info">
-                                        <span className="barrel-id">{barrel.barrelId}</span>
-                                        <StatusIndicator status={barrel.status === 'scanned' ? 'info' : 'success'}>
-                                            {barrel.status}
-                                        </StatusIndicator>
-                                        <span className="scan-time">
-                                            {new Date(barrel.scannedAt).toLocaleTimeString()}
-                                        </span>
-                                    </div>
-                                    
-                                    <div className="barrel-actions">
-                                        <RoleButton
-                                            onClick={() => updateBarrelStatus(barrel.barrelId, 'picked_up')}
-                                            size="small"
-                                            disabled={barrel.status !== 'scanned'}
-                                        >
-                                            Pick Up
-                                        </RoleButton>
-                                        
-                                        <RoleButton
-                                            onClick={() => updateBarrelStatus(barrel.barrelId, 'delivered')}
-                                            size="small"
-                                            disabled={barrel.status !== 'picked_up'}
-                                        >
-                                            Deliver
-                                        </RoleButton>
-                                        
-                                        <RoleButton
-                                            onClick={() => markAsDamaged(barrel.barrelId, 'physical', 'medium')}
-                                            size="small"
-                                            variant="outline"
-                                            disabled={barrel.status === 'damaged'}
-                                        >
-                                            Report Damage
-                                        </RoleButton>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </RoleDashboardCard>
-
-            {/* Floating Prompt */}
-            <FloatingPrompt
-                visible={showPrompt}
-                onClose={() => setShowPrompt(false)}
-            >
-                <div className="prompt-content">
-                    <h5>QR Scanning Guide</h5>
-                    <ol>
-                        <li>Position barrel QR code in camera view</li>
-                        <li>Wait for automatic scan detection</li>
-                        <li>Update barrel status (Pick Up → Deliver)</li>
-                        <li>Report any damage immediately</li>
-                    </ol>
-                </div>
-            </FloatingPrompt>
+  return (
+    <div className="barrel-qr-scanner">
+      <div className="scanner-header">
+        <h3>Barrel QR Scanner</h3>
+        <div className="scanner-controls">
+          <button
+            className={`btn ${isScanning ? 'btn-danger' : 'btn-primary'}`}
+            onClick={() => setIsScanning(!isScanning)}
+          >
+            <i className={`fas fa-${isScanning ? 'stop' : 'play'}`}></i>
+            {isScanning ? 'Stop Scanning' : 'Start Scanning'}
+          </button>
+          <button
+            className="btn btn-outline-secondary"
+            onClick={() => setShowManualEntry(!showManualEntry)}
+          >
+            <i className="fas fa-keyboard"></i>
+            Manual Entry
+          </button>
         </div>
-    );
-};
+      </div>
 
-// DRC Measurement Component for Lab Staff
-export const DRCMeasurement = ({ barrelId, onDRCUpdated }) => {
-    const { userRole } = useRoleTheme();
-    const [drcValue, setDrcValue] = useState('');
-    const [barrelCapacity, setBarrelCapacity] = useState(250);
-    const [marketRate, setMarketRate] = useState(500);
-    const [calculatedPrice, setCalculatedPrice] = useState(0);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [validationError, setValidationError] = useState('');
+      {/* Camera View */}
+      {isScanning && (
+        <div className="camera-container">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="camera-video"
+          />
+          <div className="scan-overlay">
+            <div className="scan-frame"></div>
+            <p>Position QR code within the frame</p>
+          </div>
+        </div>
+      )}
 
-    useEffect(() => {
-        fetchBarrelDetails();
-        fetchCurrentMarketRate();
-    }, [barrelId]);
+      {/* Manual Entry */}
+      {showManualEntry && (
+        <div className="manual-entry">
+          <div className="input-group">
+            <input
+              type="text"
+              value={manualEntry}
+              onChange={(e) => setManualEntry(e.target.value)}
+              placeholder="Enter barrel ID manually"
+              className="manual-input"
+            />
+            <button
+              className="btn btn-primary"
+              onClick={handleManualEntry}
+              disabled={!manualEntry.trim()}
+            >
+              <i className="fas fa-check"></i>
+              Submit
+            </button>
+          </div>
+        </div>
+      )}
 
-    const fetchBarrelDetails = async () => {
-        try {
-            const response = await fetch(`/api/barrels/${barrelId}`);
-            const barrel = await response.json();
-            setBarrelCapacity(barrel.capacity || 250);
-        } catch (error) {
-            console.error('Error fetching barrel details:', error);
-        }
-    };
+      {/* Status Selection */}
+      <div className="status-selection">
+        <label>Barrel Status:</label>
+        <div className="status-options">
+          <label className="status-option">
+            <input
+              type="radio"
+              value="picked_up"
+              checked={barrelStatus === 'picked_up'}
+              onChange={(e) => setBarrelStatus(e.target.value)}
+            />
+            <span>Picked Up</span>
+          </label>
+          <label className="status-option">
+            <input
+              type="radio"
+              value="delivered"
+              checked={barrelStatus === 'delivered'}
+              onChange={(e) => setBarrelStatus(e.target.value)}
+            />
+            <span>Delivered</span>
+          </label>
+          <label className="status-option">
+            <input
+              type="radio"
+              value="damaged"
+              checked={barrelStatus === 'damaged'}
+              onChange={(e) => setBarrelStatus(e.target.value)}
+            />
+            <span>Damaged</span>
+          </label>
+          <label className="status-option">
+            <input
+              type="radio"
+              value="in_transit"
+              checked={barrelStatus === 'in_transit'}
+              onChange={(e) => setBarrelStatus(e.target.value)}
+            />
+            <span>In Transit</span>
+          </label>
+        </div>
+      </div>
 
-    const fetchCurrentMarketRate = async () => {
-        try {
-            const response = await fetch('/api/daily-rates/latest');
-            const rate = await response.json();
-            setMarketRate(rate.ratePerKg || 500);
-        } catch (error) {
-            console.error('Error fetching market rate:', error);
-        }
-    };
+      {/* Location Info */}
+      {location && (
+        <div className="location-info">
+          <div className="location-header">
+            <i className="fas fa-map-marker-alt"></i>
+            <span>Current Location</span>
+          </div>
+          <div className="location-coords">
+            <span>Lat: {location.latitude.toFixed(6)}</span>
+            <span>Lng: {location.longitude.toFixed(6)}</span>
+          </div>
+        </div>
+      )}
 
-    const calculateEffectiveRubber = (drc) => {
-        return (barrelCapacity * drc) / 100;
-    };
-
-    const calculatePrice = (effectiveRubber) => {
-        return effectiveRubber * marketRate;
-    };
-
-    const handleDRCChange = (value) => {
-        const drc = parseFloat(value);
-        
-        if (isNaN(drc)) {
-            setDrcValue(value);
-            setCalculatedPrice(0);
-            setValidationError('');
-            return;
-        }
-
-        if (drc < 0 || drc > 100) {
-            setValidationError('DRC must be between 0% and 100%');
-            return;
-        }
-
-        setDrcValue(value);
-        setValidationError('');
-        
-        const effectiveRubber = calculateEffectiveRubber(drc);
-        const price = calculatePrice(effectiveRubber);
-        setCalculatedPrice(price);
-    };
-
-    const submitDRC = async () => {
-        if (!drcValue || validationError) return;
-
-        setIsSubmitting(true);
-        try {
-            const response = await fetch('/api/barrels/drc/update', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    barrelId,
-                    drc: parseFloat(drcValue),
-                    effectiveRubber: calculateEffectiveRubber(parseFloat(drcValue)),
-                    calculatedPrice,
-                    marketRate,
-                    barrelCapacity,
-                    status: 'pending_verification'
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to submit DRC measurement');
-            }
-
-            onDRCUpdated?.({
-                barrelId,
-                drc: parseFloat(drcValue),
-                effectiveRubber: calculateEffectiveRubber(parseFloat(drcValue)),
-                calculatedPrice,
-                status: 'pending_verification'
-            });
-
-        } catch (error) {
-            setValidationError(error.message);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    return (
-        <RoleDashboardCard 
-            title={`DRC Measurement - Barrel ${barrelId}`}
-            icon="fas fa-flask"
-            className="mb-6"
-        >
-            <div className="drc-measurement">
-                <div className="measurement-inputs">
-                    <div className="input-group">
-                        <label>Barrel Capacity (L)</label>
-                        <input
-                            type="number"
-                            value={barrelCapacity}
-                            onChange={(e) => setBarrelCapacity(parseFloat(e.target.value))}
-                            disabled
-                            className="form-input"
-                        />
-                    </div>
-
-                    <div className="input-group">
-                        <label>DRC Percentage (%)</label>
-                        <input
-                            type="number"
-                            value={drcValue}
-                            onChange={(e) => handleDRCChange(e.target.value)}
-                            placeholder="Enter DRC %"
-                            className={`form-input ${validationError ? 'error' : ''}`}
-                            min="0"
-                            max="100"
-                            step="0.01"
-                        />
-                        {validationError && (
-                            <span className="error-message">{validationError}</span>
-                        )}
-                    </div>
-
-                    <div className="input-group">
-                        <label>Market Rate (₹/L)</label>
-                        <input
-                            type="number"
-                            value={marketRate}
-                            onChange={(e) => setMarketRate(parseFloat(e.target.value))}
-                            className="form-input"
-                        />
-                    </div>
-                </div>
-
-                <div className="calculation-results">
-                    <div className="result-item">
-                        <span className="result-label">Effective Rubber:</span>
-                        <span className="result-value">
-                            {drcValue ? calculateEffectiveRubber(parseFloat(drcValue)).toFixed(2) : '0'} L
-                        </span>
-                    </div>
-                    
-                    <div className="result-item">
-                        <span className="result-label">Calculated Price:</span>
-                        <span className="result-value">
-                            ₹{calculatedPrice.toFixed(2)}
-                        </span>
-                    </div>
-                </div>
-
-                <div className="action-buttons">
-                    <RoleButton
-                        onClick={submitDRC}
-                        disabled={!drcValue || validationError || isSubmitting}
-                        loading={isSubmitting}
-                    >
-                        <i className="fas fa-check"></i> Submit DRC
-                    </RoleButton>
-                </div>
+      {/* Recent Scans */}
+      {scannedData && (
+        <div className="recent-scan">
+          <div className="scan-result">
+            <div className="scan-header">
+              <i className="fas fa-check-circle"></i>
+              <span>Last Scanned</span>
             </div>
-        </RoleDashboardCard>
-    );
+            <div className="scan-details">
+              <div className="scan-id">Barrel ID: {scannedData}</div>
+              <div className="scan-status">Status: {barrelStatus.replace('_', ' ')}</div>
+              <div className="scan-time">
+                {new Date().toLocaleTimeString()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Instructions */}
+      <div className="scanner-instructions">
+        <h4>Instructions:</h4>
+        <ol>
+          <li>Select the appropriate barrel status</li>
+          <li>Click "Start Scanning" to activate camera</li>
+          <li>Position the QR code within the frame</li>
+          <li>The system will automatically detect and process the code</li>
+          <li>Use "Manual Entry" if QR code is damaged or unreadable</li>
+        </ol>
+      </div>
+    </div>
+  );
 };
 
 export default BarrelQRScanner;

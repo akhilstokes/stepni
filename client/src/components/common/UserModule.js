@@ -89,6 +89,7 @@ const UserModule = ({ showIcons = true, showProfile = true, showLogout = true })
                                         <i className="fas fa-pen"></i>
                                         <span>Edit Profile</span>
                                     </NavLink>
+
                                     {showLogout && (
                                         <div onClick={() => setMenuOpen(false)}>
                                             <LogoutButton 

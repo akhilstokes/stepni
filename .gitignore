@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-node_modules
-=======
 # Dependencies
 node_modules/
 */node_modules/
@@ -26,6 +23,7 @@ yarn-error.log*
 # Environment variables
 .env
 .env.local
+.env.test
 .env.development.local
 .env.test.local
 .env.production.local
@@ -45,6 +43,12 @@ coverage/
 server/coverage/
 client/coverage/
 
+# Test results
+test-results/
+playwright-report/
+test-report.html
+test-results.json
+
 # OS files
 Thumbs.db
 .DS_Store
@@ -57,7 +61,15 @@ logs/
 server/uploads/
 uploads/
 
+# Python
+python/__pycache__/
+*.pyc
+*.pyo
+python/datasets/*.csv
+
+# Datasets
+datasets/
+
 # Package lock files (optional - uncomment if you want to ignore)
 # package-lock.json
 # yarn.lock
->>>>>>> 3c894b97a18da6093adca71085bcfa17543eb1e5

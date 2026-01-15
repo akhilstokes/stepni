@@ -147,9 +147,6 @@ function AdminCreateBarrel() {
       
 
       const res = await fetch(`${API}/api/barrels`, {
-
-      const res = await fetch('/api/barrels', {
-
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json', 
@@ -293,8 +290,6 @@ function AdminCreateBarrel() {
                   try {
 
                     const res = await fetch(`${API}/api/barrel-logistics/approve/purchase`, {
-
-                    const res = await fetch('/api/barrel-logistics/approve/purchase', {
 
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : undefined },

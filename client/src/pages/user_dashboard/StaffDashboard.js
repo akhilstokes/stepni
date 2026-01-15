@@ -23,6 +23,7 @@ export default function StaffDashboard() {
     return 'Good Night';
   };
 
+
   const fetchDashboard = useCallback(async () => {
     try {
       setLoading(true);
@@ -39,6 +40,7 @@ export default function StaffDashboard() {
     } finally {
       setLoading(false);
     }
+
   }, [token, apiBase]);
 
   const fetchShiftSchedule = useCallback(async () => {
@@ -72,6 +74,8 @@ export default function StaffDashboard() {
   }, []);
 
 
+
+
   const action = async (type) => {
     try {
       const url = type === 'in' ? '/api/workers/field/attendance/check-in' : '/api/workers/field/attendance/check-out';
@@ -87,6 +91,9 @@ export default function StaffDashboard() {
 
   if (loading) return <div className="loading">Loading...</div>;
   if (error) return <div className="error">Error: {error}</div>;
+
+  if (loading) return <div style={{ padding: 16 }}>Loading...</div>;
+  if (error) return <div style={{ padding: 16, color: 'red' }}>{error}</div>;
 
   const { worker, attendance, route } = data;
 

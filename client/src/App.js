@@ -19,17 +19,61 @@ import ManagerDashboardLayout from "./layouts/ManagerDashboardLayout";
 // Manager Pages
 import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import ManagerHome from "./pages/manager/ManagerHome";
+import ManagerProfile from "./pages/manager/ManagerProfile";
+import ManagerSettings from "./pages/manager/ManagerSettings";
+import ManagerAttendance from "./pages/manager/ManagerAttendance";
+import ManagerExpenses from "./pages/manager/ManagerExpenses";
+import ComplaintManagement from "./pages/manager/ComplaintManagement";
+import ManagerHangerSpace from "./pages/manager/ManagerHangerSpace";
+import ManagerStock from "./pages/manager/ManagerStock";
+import ManagerBarrelAllocation from "./pages/manager/ManagerBarrelAllocation";
+import ManagerReturnBarrels from "./pages/manager/ManagerReturnBarrels";
+import ApproveSellRequests from "./pages/manager/ApproveSellRequests";
+import ManagerLatexBilling from "./pages/manager/ManagerLatexBilling";
+import ManagerRateUpdate from "./pages/manager/ManagerRateUpdate";
+import ManagerWages from "./pages/manager/ManagerWages";
+import ManagerStaffSalary from "./pages/manager/ManagerStaffSalary";
+import ManagerShifts from "./pages/manager/ManagerShifts";
+import ShiftManagement from "./pages/manager/ShiftManagement";
+import StaffSchedule from "./pages/manager/StaffSchedule";
+import ManagerChemicalRequests from "./pages/manager/ManagerChemicalRequests";
+import ManagerNotifications from "./pages/manager/ManagerNotifications";
+import PendingLeaves from "./pages/manager/PendingLeaves";
+import LiveCheckins from "./pages/manager/LiveCheckins";
+import LiveAttendance from "./pages/manager/LiveAttendance";
 
 // Lab Pages
 import LabProtectedRoute from "./components/common/LabProtectedRoute";
 import LabDashboard from "./pages/lab/LabDashboard";
 import LabDashboardLayout from "./layouts/LabDashboardLayout";
+import LabAttendance from "./pages/lab/LabAttendance";
+import LabLeave from "./pages/lab/LabLeave";
+import LabSalary from "./pages/lab/LabSalary";
+import LabCheckIn from "./pages/lab/LabCheckIn";
+import LabDRCUpdate from "./pages/lab/LabDRCUpdate";
+import LabQualityClassifier from "./pages/lab/LabQualityClassifier";
+import LabQualityComparison from "./pages/lab/LabQualityComparison";
+import LabChemicalRequests from "./pages/lab/LabChemicalRequests";
+import LabReports from "./pages/lab/LabReports";
+import LabShiftSchedule from "./pages/lab/LabShiftSchedule";
 
 // Accountant Module
 import AccountantProtectedRoute from "./components/common/AccountantProtectedRoute";
 import AccountantDashboardLayout from "./layouts/AccountantLayoutAntigravity";
 import AccountantDashboard from "./pages/accountant/AccountantDashboard";
 import AccountantWages from "./pages/accountant/AccountantWages";
+import AccountantLatexVerify from "./pages/accountant/AccountantLatexVerify";
+import AccountantExpenseTracker from "./pages/accountant/AccountantExpenseTracker";
+import AccountantStockMonitor from "./pages/accountant/AccountantStockMonitor";
+import AccountantAttendance from "./pages/accountant/AccountantAttendance";
+import AccountantLeave from "./pages/accountant/AccountantLeave";
+import AccountantSalaries from "./pages/accountant/AccountantSalaries";
+import AccountantBillGeneration from "./pages/accountant/AccountantBillGeneration";
+import AccountantDeliveryIntake from "./pages/accountant/AccountantDeliveryIntake";
+import AccountantVendorLedger from "./pages/accountant/AccountantVendorLedger";
+import AccountantDocuments from "./pages/accountant/AccountantDocuments";
+import AccountantReports from "./pages/accountant/AccountantReports";
+import AccountantAlerts from "./pages/accountant/AccountantAlerts";
 
 // Public Pages
 import HomePage from "./pages/HomePage";
@@ -50,19 +94,58 @@ import StaffLoginPage from "./pages/auth/StaffLoginPage";
 import Profile from "./pages/user_dashboard/Profile";
 import UserLiveRate from "./pages/UserLiveRate";
 import UserDashboard from "./pages/user_dashboard/UserDashboard";
+import MyActions from "./pages/user_dashboard/MyActions";
+import Notifications from "./pages/user_dashboard/Notifications";
+import UserRequests from "./pages/user_dashboard/UserRequests";
+import UserTransactions from "./pages/user_dashboard/UserTransactions";
+import UserTransactionDetail from "./pages/user_dashboard/UserTransactionDetail";
 
 // Staff Pages
 import StaffProtectedRoute from "./components/common/StaffProtectedRoute";
 import StaffDashboardLayout from "./layouts/StaffDashboardLayout";
 import StaffDashboard from "./pages/user_dashboard/StaffDashboard";
+import StaffAttendance from "./pages/staff/StaffAttendance";
+import StaffLeave from "./pages/staff/StaffLeave";
+import StaffSalary from "./pages/staff/StaffSalary";
+import StaffIssues from "./pages/staff/StaffIssues";
+import ReturnBarrels from "./pages/staff/ReturnBarrels";
+import MySchedule from "./pages/staff/MySchedule";
+
+// Field Staff Pages
+import FieldStaffRoutes from "./pages/field-staff/FieldStaffRoutes";
+import FieldStaffReports from "./pages/field-staff/FieldStaffReports";
+import FieldStaffProfile from "./pages/field-staff/FieldStaffProfile";
+import FieldStaffDashboard from "./components/dashboards/FieldStaffDashboard";
 
 // Delivery Staff
 import DeliveryProtectedRoute from "./components/common/DeliveryProtectedRoute";
 import DeliveryDashboardLayout from "./layouts/DeliveryDashboardLayout";
 import DeliveryDashboard from "./pages/delivery/DeliveryDashboard";
+import DeliveryRoutePlan from "./pages/delivery/DeliveryRoutePlan";
+import DeliveryTasks from "./pages/delivery/DeliveryTasks";
+import DeliveryAssignedSellRequests from "./pages/delivery/DeliveryAssignedSellRequests";
+import DeliveryBarrelIntake from "./pages/delivery/DeliveryBarrelIntake";
+import DeliveryTaskHistory from "./pages/delivery/DeliveryTaskHistory";
+import DeliveryShiftSchedule from "./pages/delivery/DeliveryShiftSchedule";
+import DeliveryLeave from "./pages/delivery/DeliveryLeave";
+import DeliverySalary from "./pages/delivery/DeliverySalary";
 
 // Admin Pages
 import AdminHome from "./pages/admin/AdminHome";
+import Attendance from "./pages/admin/Attendance";
+import AdminStaff from "./pages/admin/AdminStaff";
+import AdminStaffManagement from "./pages/admin/AdminStaffManagement";
+import WorkerSchedule from "./pages/admin/WorkerSchedule";
+import WorkerDocuments from "./pages/admin/WorkerDocuments";
+import YardStock from "./pages/admin/YardStock";
+import GodownRubberStock from "./pages/admin/GodownRubberStock";
+import HangerSpace from "./pages/admin/HangerSpace";
+import ChemicalStockHistory from "./pages/admin/ChemicalStockHistory";
+import AdminCreateBarrel from "./pages/admin/AdminCreateBarrel";
+import BarrelManagement from "./pages/admin/BarrelManagement";
+import AdminExpenses from "./pages/admin/AdminExpenses";
+import AdminChemicalRequests from "./pages/admin/AdminChemicalRequests";
+import AdminRateVerification from "./pages/admin/AdminRateVerification";
 
 function App() {
   return (
@@ -151,6 +234,56 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/user/my-actions"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <MyActions />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user/notifications"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Notifications />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user/requests"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <UserRequests />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user/transactions"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <UserTransactions />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user/transactions/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <UserTransactionDetail />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Staff Routes */}
         <Route
@@ -159,6 +292,119 @@ function App() {
             <StaffProtectedRoute>
               <StaffDashboardLayout>
                 <StaffDashboard />
+              </StaffDashboardLayout>
+            </StaffProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/attendance"
+          element={
+            <StaffProtectedRoute>
+              <StaffDashboardLayout>
+                <StaffAttendance />
+              </StaffDashboardLayout>
+            </StaffProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/schedule"
+          element={
+            <StaffProtectedRoute>
+              <StaffDashboardLayout>
+                <MySchedule />
+              </StaffDashboardLayout>
+            </StaffProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/leave"
+          element={
+            <StaffProtectedRoute>
+              <StaffDashboardLayout>
+                <StaffLeave />
+              </StaffDashboardLayout>
+            </StaffProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/salary"
+          element={
+            <StaffProtectedRoute>
+              <StaffDashboardLayout>
+                <StaffSalary />
+              </StaffDashboardLayout>
+            </StaffProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/issues"
+          element={
+            <StaffProtectedRoute>
+              <StaffDashboardLayout>
+                <StaffIssues />
+              </StaffDashboardLayout>
+            </StaffProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/return-barrels"
+          element={
+            <StaffProtectedRoute>
+              <StaffDashboardLayout>
+                <ReturnBarrels />
+              </StaffDashboardLayout>
+            </StaffProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/profile"
+          element={
+            <StaffProtectedRoute>
+              <StaffDashboardLayout>
+                {/* Show field staff profile for field staff, generic profile for others */}
+                <FieldStaffProfile />
+              </StaffDashboardLayout>
+            </StaffProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/settings"
+          element={
+            <StaffProtectedRoute>
+              <StaffDashboardLayout>
+                <div style={{padding: '20px'}}><h2>Settings</h2><p>This page is under development.</p></div>
+              </StaffDashboardLayout>
+            </StaffProtectedRoute>
+          }
+        />
+
+        {/* Field Staff Routes */}
+        <Route
+          path="/field-staff/dashboard"
+          element={
+            <StaffProtectedRoute>
+              <StaffDashboardLayout>
+                <FieldStaffDashboard />
+              </StaffDashboardLayout>
+            </StaffProtectedRoute>
+          }
+        />
+        <Route
+          path="/field-staff/routes"
+          element={
+            <StaffProtectedRoute>
+              <StaffDashboardLayout>
+                <FieldStaffRoutes />
+              </StaffDashboardLayout>
+            </StaffProtectedRoute>
+          }
+        />
+        <Route
+          path="/field-staff/reports"
+          element={
+            <StaffProtectedRoute>
+              <StaffDashboardLayout>
+                <FieldStaffReports />
               </StaffDashboardLayout>
             </StaffProtectedRoute>
           }
@@ -175,6 +421,106 @@ function App() {
             </LabProtectedRoute>
           }
         />
+        <Route
+          path="/lab/attendance"
+          element={
+            <LabProtectedRoute>
+              <LabDashboardLayout>
+                <LabAttendance />
+              </LabDashboardLayout>
+            </LabProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab/leave"
+          element={
+            <LabProtectedRoute>
+              <LabDashboardLayout>
+                <LabLeave />
+              </LabDashboardLayout>
+            </LabProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab/shift-schedule"
+          element={
+            <LabProtectedRoute>
+              <LabDashboardLayout>
+                <LabShiftSchedule />
+              </LabDashboardLayout>
+            </LabProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab/check-in"
+          element={
+            <LabProtectedRoute>
+              <LabDashboardLayout>
+                <LabCheckIn />
+              </LabDashboardLayout>
+            </LabProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab/drc-update"
+          element={
+            <LabProtectedRoute>
+              <LabDashboardLayout>
+                <LabDRCUpdate />
+              </LabDashboardLayout>
+            </LabProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab/quality-classifier"
+          element={
+            <LabProtectedRoute>
+              <LabDashboardLayout>
+                <LabQualityClassifier />
+              </LabDashboardLayout>
+            </LabProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab/quality-comparison"
+          element={
+            <LabProtectedRoute>
+              <LabDashboardLayout>
+                <LabQualityComparison />
+              </LabDashboardLayout>
+            </LabProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab/chem-requests"
+          element={
+            <LabProtectedRoute>
+              <LabDashboardLayout>
+                <LabChemicalRequests />
+              </LabDashboardLayout>
+            </LabProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab/salary"
+          element={
+            <LabProtectedRoute>
+              <LabDashboardLayout>
+                <LabSalary />
+              </LabDashboardLayout>
+            </LabProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab/reports"
+          element={
+            <LabProtectedRoute>
+              <LabDashboardLayout>
+                <LabReports />
+              </LabDashboardLayout>
+            </LabProtectedRoute>
+          }
+        />
 
         {/* Manager Routes */}
         <Route
@@ -183,6 +529,236 @@ function App() {
             <ManagerProtectedRoute>
               <ManagerDashboardLayout>
                 <ManagerHome />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/home"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerHome />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/live"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <LiveCheckins />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/live-attendance"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <LiveAttendance />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/leaves"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <PendingLeaves />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/attendance"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerAttendance />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/expenses"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerExpenses />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/completed"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ComplaintManagement />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/hanger-space"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerHangerSpace />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/stock"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerStock />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/barrel-allocation"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerBarrelAllocation />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/returned-barrels"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerReturnBarrels />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/sell-requests"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ApproveSellRequests />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/latex-billing"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerLatexBilling />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/rates"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerRateUpdate />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/wages"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerWages />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/staff-salary"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerStaffSalary />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/shifts"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerShifts />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/shift-management"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ShiftManagement />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/staff-schedule"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <StaffSchedule />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/chem-requests"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerChemicalRequests />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/notifications"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerNotifications />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/profile"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerProfile />
+              </ManagerDashboardLayout>
+            </ManagerProtectedRoute>
+          }
+        />
+        <Route
+          path="/manager/settings"
+          element={
+            <ManagerProtectedRoute>
+              <ManagerDashboardLayout>
+                <ManagerSettings />
               </ManagerDashboardLayout>
             </ManagerProtectedRoute>
           }
@@ -199,6 +775,106 @@ function App() {
             </DeliveryProtectedRoute>
           }
         />
+        <Route
+          path="/delivery/route-plan"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <DeliveryRoutePlan />
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/tasks"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <DeliveryTasks />
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/assigned-requests"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <DeliveryAssignedSellRequests />
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/barrel-intake"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <DeliveryBarrelIntake />
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/task-history"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <DeliveryTaskHistory />
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/shift-schedule"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <DeliveryShiftSchedule />
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/leave"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <DeliveryLeave />
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/salary"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <DeliverySalary />
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/profile"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <div style={{padding: '20px'}}><h2>My Profile</h2><p>This page is under development.</p></div>
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/settings"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <div style={{padding: '20px'}}><h2>Settings</h2><p>This page is under development.</p></div>
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
 
         {/* Admin Routes */}
         <Route
@@ -207,6 +883,166 @@ function App() {
             <AdminProtectedRoute>
               <AdminDashboardLayout>
                 <AdminHome />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/attendance"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <Attendance />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/staff"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminStaff />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/staff-management"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminStaffManagement />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/worker-schedule"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <WorkerSchedule />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/worker-documents"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <WorkerDocuments />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/yard-stock"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <YardStock />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/godown-rubber-stock"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <GodownRubberStock />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/hanger-space"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <HangerSpace />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/chemical-stock-history"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <ChemicalStockHistory />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/create-barrel"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminCreateBarrel />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/barrel-requests"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <BarrelManagement />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/expenses"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminExpenses />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/chem-requests"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminChemicalRequests />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/rates"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <AdminRateVerification />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/profile"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <div style={{padding: '20px'}}><h2>Admin Profile</h2><p>This page is under development.</p></div>
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <div style={{padding: '20px'}}><h2>Admin Settings</h2><p>This page is under development.</p></div>
               </AdminDashboardLayout>
             </AdminProtectedRoute>
           }
@@ -229,6 +1065,126 @@ function App() {
             <AccountantProtectedRoute>
               <AccountantDashboardLayout>
                 <AccountantWages />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/latex"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantLatexVerify />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/expenses"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantExpenseTracker />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/stock"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantStockMonitor />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/attendance"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantAttendance />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/leave"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantLeave />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/salaries"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantSalaries />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/bill-generation"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantBillGeneration />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/delivery-intake"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantDeliveryIntake />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/vendors"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantVendorLedger />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/documents"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantDocuments />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/reports"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantReports />
+              </AccountantDashboardLayout>
+            </AccountantProtectedRoute>
+          }
+        />
+        <Route
+          path="/accountant/alerts"
+          element={
+            <AccountantProtectedRoute>
+              <AccountantDashboardLayout>
+                <AccountantAlerts />
               </AccountantDashboardLayout>
             </AccountantProtectedRoute>
           }

@@ -217,6 +217,14 @@
   flex-shrink: 0;
 }
 
+.delivery-nav-icon i {
+  opacity: 0.95;
+}
+
+.delivery-nav-item:hover .delivery-nav-icon {
+  background: rgba(255, 255, 255, 0.16);
+}
+
 .delivery-nav-item.active .delivery-nav-icon {
   background: rgba(255, 255, 255, 0.2);
   color: white;
@@ -428,13 +436,14 @@
   width: 40px;
   height: 40px;
   background: #f1f5f9;
-  border: none;
-  border-radius: 8px;
-  color: #64748b;
-  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 16px;
   transition: all 0.2s ease;
 }
 
@@ -443,15 +452,28 @@
   color: #475569;
 }
 
+.delivery-notification-btn:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.55);
+  outline-offset: 2px;
+}
+
 .delivery-notification-dot {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   background: #ef4444;
-  border-radius: 50%;
+  border-radius: 999px;
   border: 2px solid white;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 /* Profile Dropdown */

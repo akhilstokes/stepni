@@ -1,6 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import './LabDashboard.css';
 
 const LabDashboard = () => {
@@ -357,4 +356,3 @@ const LabDashboard = () => {
 };
 
 export default LabDashboard;
-

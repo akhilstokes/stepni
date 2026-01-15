@@ -11,6 +11,7 @@ const AdminDashboardLayout = ({ children }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [notificationCount] = useState(1);
   const menuRef = useRef(null);
 
 
@@ -204,6 +205,14 @@ const AdminDashboardLayout = ({ children }) => {
           </div>
 
           <div className="admin-header-right">
+            {/* Notification Button */}
+            <button className="admin-notification-btn" onClick={() => navigate('/admin/notifications')}>
+              <i className="fas fa-bell"></i>
+              {notificationCount > 0 && (
+                <div className="admin-notification-badge">{notificationCount}</div>
+              )}
+            </button>
+
             {/* Profile Dropdown */}
             <div className="admin-profile-dropdown" ref={menuRef}>
               <button 
@@ -217,13 +226,12 @@ const AdminDashboardLayout = ({ children }) => {
                   <div className="admin-profile-name">{user?.name || 'Administrator'}</div>
                   <div className="admin-profile-role">System Administrator</div>
                 </div>
-                <i className={`fas fa-chevron-${profileMenuOpen ? 'up' : 'down'}`}></i>
               </button>
 
               {profileMenuOpen && (
                 <div className="admin-dropdown-menu">
                   <NavLink 
-                    to="/user/profile/view" 
+                    to="/admin/profile" 
                     className="admin-dropdown-item"
                     onClick={() => setProfileMenuOpen(false)}
                   >
@@ -231,12 +239,12 @@ const AdminDashboardLayout = ({ children }) => {
                     View Profile
                   </NavLink>
                   <NavLink 
-                    to="/user/profile" 
+                    to="/admin/settings" 
                     className="admin-dropdown-item"
                     onClick={() => setProfileMenuOpen(false)}
                   >
-                    <i className="fas fa-edit"></i>
-                    Edit Profile
+                    <i className="fas fa-cog"></i>
+                    Settings
                   </NavLink>
                   <div className="admin-dropdown-item" onClick={handleSignOut}>
                     <i className="fas fa-sign-out-alt"></i>

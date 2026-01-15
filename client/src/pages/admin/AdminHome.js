@@ -126,7 +126,6 @@ const AdminHome = () => {
         <Card title="Delivery Scan" desc="Delivery staff scanning" to="/delivery/barrel-scan" action="Scan" />
         <Card title="Accountant Billing" desc="Payments and billing" to="/accountant/payments" action="Open" />
         <Card title="Lab DRC" desc="Enter/compute DRC" to="/lab/drc-update" action="Open" />
-
       </Section>
     </div>
   );

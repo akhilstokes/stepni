@@ -1,5 +1,143 @@
 /* client/src/pages/user_dashboard/userDashboardTheme.css */
 
+ .user-dashboard {
+   padding: 22px;
+ }
+
+ .userdash-header {
+   display: flex;
+   align-items: flex-end;
+   justify-content: space-between;
+   gap: 16px;
+   margin-bottom: 16px;
+ }
+
+ .userdash-title h2 {
+   margin: 0;
+   font-size: 1.35rem;
+   color: #0f172a;
+ }
+
+ .userdash-title p {
+   margin: 6px 0 0;
+   color: #64748b;
+   font-weight: 500;
+ }
+
+ .userdash-quick {
+   display: flex;
+   gap: 10px;
+   flex-wrap: wrap;
+ }
+
+ .userdash-stats {
+   display: grid;
+   grid-template-columns: repeat(3, minmax(0, 1fr));
+   gap: 12px;
+   margin: 14px 0 18px;
+ }
+
+ .userdash-stat {
+   background: #fff;
+   border: 1px solid #e5e7eb;
+   border-radius: 14px;
+   padding: 14px;
+   display: flex;
+   gap: 12px;
+   align-items: center;
+   box-shadow: 0 4px 18px rgba(17,24,39,0.06);
+ }
+
+ .userdash-stat-icon {
+   width: 42px;
+   height: 42px;
+   border-radius: 12px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+   color: #4f46e5;
+   font-size: 1.2rem;
+ }
+
+ .userdash-stat-label {
+   font-size: 0.85rem;
+   font-weight: 800;
+   color: #334155;
+ }
+
+ .userdash-stat-value {
+   margin-top: 2px;
+   font-size: 0.95rem;
+   font-weight: 700;
+   color: #0f172a;
+ }
+
+ .userdash-grid {
+   display: grid;
+   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+   gap: 14px;
+ }
+
+ .userdash-card {
+   text-decoration: none;
+   color: inherit;
+   background: #fff;
+   border: 1px solid #e5e7eb;
+   border-radius: 14px;
+   padding: 16px;
+   box-shadow: 0 4px 18px rgba(17,24,39,0.06);
+   display: flex;
+   gap: 14px;
+   align-items: center;
+   transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease;
+ }
+
+ .userdash-card:hover {
+   transform: translateY(-2px);
+   box-shadow: 0 10px 24px rgba(17,24,39,0.10);
+   border-color: #c7d2fe;
+ }
+
+ .userdash-card-icon {
+   width: 46px;
+   height: 46px;
+   border-radius: 14px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   background: linear-gradient(135deg, #4f46e5, #7c3aed);
+   color: #fff;
+   flex: 0 0 auto;
+   font-size: 1.3rem;
+ }
+
+ .userdash-card-body {
+   flex: 1 1 auto;
+   min-width: 0;
+ }
+
+ .userdash-card-title {
+   font-weight: 800;
+   color: #0f172a;
+ }
+
+ .userdash-card-desc {
+   margin-top: 4px;
+   color: #64748b;
+   font-weight: 500;
+   font-size: 0.95rem;
+   line-height: 1.35;
+ }
+
+ .userdash-card-cta {
+   display: inline-flex;
+   align-items: center;
+   gap: 8px;
+   color: #4f46e5;
+   font-weight: 800;
+ }
+
 /* Buttons */
 .btn {
   appearance: none;
@@ -71,6 +209,10 @@ input:focus, select:focus, textarea:focus { border-color: #a78bfa; box-shadow: 0
 
 /* Responsive table (fallback if no global style) */
 @media (max-width: 640px) {
+  .user-dashboard { padding: 14px; }
+  .userdash-header { align-items: flex-start; flex-direction: column; }
+  .userdash-stats { grid-template-columns: 1fr; }
+
   .table thead { display: none; }
   .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
   .table tr { margin-bottom: 10px; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }

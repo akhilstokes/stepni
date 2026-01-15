@@ -7,23 +7,32 @@ const Notification = require('../models/Notification');
 // Staff: Return barrels
 router.post('/return', protect, async (req, res) => {
   try {
-    const { barrels, returnedBy, returnedAt, status } = req.body;
+    const { barrels, barrelIds, returnedBy, returnedAt, condition, returnReason, notes } = req.body;
+
+    const normalizedBarrels = Array.isArray(barrels) && barrels.length
+      ? barrels
+      : (Array.isArray(barrelIds) ? barrelIds : [])
+          .map(id => String(id || '').trim())
+          .filter(Boolean)
+          .map(id => ({ barrelId: id }));
     
-    if (!barrels || barrels.length === 0) {
+    if (!normalizedBarrels || normalizedBarrels.length === 0) {
       return res.status(400).json({ message: 'No barrels to return' });
     }
 
     // Create barrel return record
     const barrelReturn = await BarrelReturn.create({
-      barrels: barrels.map(barrel => ({
+      barrels: normalizedBarrels.map(barrel => ({
         barrelId: barrel.barrelId,
-        scannedAt: barrel.scannedAt,
-        scannedBy: barrel.scannedBy
+        scannedAt: barrel.scannedAt ? new Date(barrel.scannedAt) : new Date(),
+        scannedBy: barrel.scannedBy || (req.user?.name || req.user?.email || String(req.user?._id || 'system'))
       })),
-      returnedBy,
-      returnedAt,
-      status: 'returned',
-      createdAt: new Date()
+      returnedBy: returnedBy || req.user?._id,
+      returnedAt: returnedAt ? new Date(returnedAt) : new Date(),
+      condition,
+      returnReason,
+      notes,
+      status: 'returned'
     });
 
     // Notify managers about returned barrels
@@ -32,7 +41,7 @@ router.post('/return', protect, async (req, res) => {
     res.json({
       message: 'Barrels returned successfully',
       returnId: barrelReturn._id,
-      barrelCount: barrels.length
+      barrelCount: normalizedBarrels.length
     });
   } catch (error) {
     console.error('Error returning barrels:', error);
@@ -51,7 +60,7 @@ router.get('/returned', protect, adminOrManager, async (req, res) => {
     }
 
     const returnedBarrels = await BarrelReturn.find(query)
-      .populate('returnedBy', 'name email')
+      .populate('returnedBy', 'name email role')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -66,6 +75,72 @@ router.get('/returned', protect, adminOrManager, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching returned barrels:', error);
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+});
+
+// Manager: Update a return record
+router.put('/returned/:id', protect, adminOrManager, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { barrelIds, barrels, returnedBy, returnedAt, condition, returnReason, notes, status } = req.body || {};
+
+    const barrelReturn = await BarrelReturn.findById(id);
+    if (!barrelReturn) {
+      return res.status(404).json({ message: 'Barrel return record not found' });
+    }
+
+    if (status && ['returned', 'reassigned', 'completed'].includes(status)) {
+      barrelReturn.status = status;
+      if (status === 'completed' && !barrelReturn.completedAt) {
+        barrelReturn.completedAt = new Date();
+      }
+    }
+
+    if (returnedBy) barrelReturn.returnedBy = returnedBy;
+    if (returnedAt) barrelReturn.returnedAt = new Date(returnedAt);
+    if (condition) barrelReturn.condition = condition;
+    if (typeof returnReason === 'string') barrelReturn.returnReason = returnReason;
+    if (typeof notes === 'string') barrelReturn.notes = notes;
+
+    const normalizedBarrels = Array.isArray(barrels) && barrels.length
+      ? barrels
+      : (typeof barrelIds === 'string'
+          ? barrelIds.split(',').map(s => s.trim()).filter(Boolean)
+          : Array.isArray(barrelIds)
+              ? barrelIds.map(s => String(s || '').trim()).filter(Boolean)
+              : []
+        ).map(barrelId => ({ barrelId }));
+
+    if (normalizedBarrels.length) {
+      barrelReturn.barrels = normalizedBarrels.map(b => ({
+        barrelId: b.barrelId,
+        scannedAt: b.scannedAt ? new Date(b.scannedAt) : new Date(),
+        scannedBy: b.scannedBy || (req.user?.name || req.user?.email || String(req.user?._id || 'system'))
+      }));
+    }
+
+    await barrelReturn.save();
+    const populated = await BarrelReturn.findById(barrelReturn._id).populate('returnedBy', 'name email role');
+
+    res.json({ message: 'Return updated successfully', returnedBarrel: populated });
+  } catch (error) {
+    console.error('Error updating return:', error);
+    res.status(500).json({ message: 'Server Error', error: error.message });
+  }
+});
+
+// Manager: Delete a return record
+router.delete('/returned/:id', protect, adminOrManager, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await BarrelReturn.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Barrel return record not found' });
+    }
+    res.json({ message: 'Return deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting return:', error);
     res.status(500).json({ message: 'Server Error', error: error.message });
   }
 });

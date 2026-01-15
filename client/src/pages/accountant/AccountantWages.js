@@ -137,9 +137,6 @@ export default function AccountantWages() {
         </div>
       )}
 
-      {/* Calculation Result */}
-      {calculating && <div className="loading-spinner"></div>}
-
       {selected && result && !calculating && (
         <div className="result-section">
           <div className="salary-slip-card">

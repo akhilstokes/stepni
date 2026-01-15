@@ -43,7 +43,7 @@ const ContactPage = () => {
                                         </div>
                                         <div className="detail-info">
                                             <span className="detail-label">Address</span>
-                                            <span className="detail-value">Industrial Estate, Rubber Park<br />Kottayam, Kerala 686001, India</span>
+                                            <span className="detail-value"> V/114 V-114, HOLYFAMILY BUILDINGS, KOOROPPADA, PAMPADY Kottayam, Kerala, 686502 India</span>
                                         </div>
                                     </div>
                                     
@@ -53,7 +53,7 @@ const ContactPage = () => {
                                         </div>
                                         <div className="detail-info">
                                             <span className="detail-label">Phone</span>
-                                            <span className="detail-value">+91 481 2345678<br />+91 9876543210</span>
+                                            <span className="detail-value">+91 9526264949</span>
                                         </div>
                                     </div>
                                     
@@ -102,38 +102,22 @@ const ContactPage = () => {
                             </div>
                         </div>
 
-                        {/* Quick Actions */}
-                        <div className="quick-actions">
-                            <h3>Get In Touch</h3>
-                            <div className="action-buttons">
-                                <a href="tel:+914812345678" className="action-btn call-btn">
-                                    <div className="btn-icon">
-                                        <i className="fas fa-phone"></i>
-                                    </div>
-                                    <div className="btn-content">
-                                        <span className="btn-title">Call Now</span>
-                                        <span className="btn-subtitle">+91 481 2345678</span>
-                                    </div>
-                                </a>
-                                <a href="mailto:info@holyfamilypolymers.com" className="action-btn email-btn">
-                                    <div className="btn-icon">
-                                        <i className="fas fa-envelope"></i>
-                                    </div>
-                                    <div className="btn-content">
-                                        <span className="btn-title">Send Email</span>
-                                        <span className="btn-subtitle">info@holyfamilypolymers.com</span>
-                                    </div>
-                                </a>
-                                <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="action-btn directions-btn">
-                                    <div className="btn-icon">
-                                        <i className="fas fa-map-marker-alt"></i>
-                                    </div>
-                                    <div className="btn-content">
-                                        <span className="btn-title">Get Directions</span>
-                                        <span className="btn-subtitle">Find us on map</span>
-                                    </div>
-                                </a>
-                            </div>
+                        <div className="contact-actions">
+                            <a href="tel:+919526264949" className="contact-action-link">
+                                <i className="fas fa-phone"></i>
+                                <div className="contact-action-content">
+                                    <span className="contact-action-title">Call Now</span>
+                                    <span className="contact-action-subtitle">+91 9526264949</span>
+                                </div>
+                            </a>
+                            <a href="mailto:info@holyfamilypolymers.com" className="contact-action-link">
+                                <i className="fas fa-envelope"></i>
+                                <span>Email</span>
+                            </a>
+                            <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="contact-action-link">
+                                <i className="fas fa-map-marker-alt"></i>
+                                <span>Directions</span>
+                            </a>
                         </div>
                     </div>
                 </div>
