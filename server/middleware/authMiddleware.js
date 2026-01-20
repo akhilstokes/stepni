@@ -141,7 +141,7 @@ exports.labOnly = (req, res, next) => {
 
 // Allow Lab staff or Admin
 exports.labOrAdminMiddleware = (req, res, next) => {
-    if (req.user && (req.user.role === 'lab' || req.user.role === 'admin')) {
+    if (req.user && (req.user.role === 'lab' || req.user.role === 'lab_staff' || req.user.role === 'lab_manager' || req.user.role === 'admin')) {
         return next();
     }
     return res.status(403).json({ message: 'Not authorized. Lab staff or Admin required.' });

@@ -1,12 +1,96 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './LabDashboard.css';
 
 const LabDashboard = () => {
-  const [activeTab, setActiveTab] = useState('pending');
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('incoming');
   const [selectedBarrel, setSelectedBarrel] = useState(null);
   const [drcValue, setDrcValue] = useState('');
   const [testNotes, setTestNotes] = useState('');
+  const [incomingRequests, setIncomingRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+  // Fetch incoming barrel intake requests from delivery staff
+  useEffect(() => {
+    fetchIncomingRequests();
+    
+    // Auto-refresh every 30 seconds to update the count
+    const interval = setInterval(() => {
+      if (activeTab === 'incoming') {
+        fetchIncomingRequests();
+      }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [activeTab]);
+
+  const fetchIncomingRequests = async () => {
+    if (activeTab !== 'incoming') return;
+    
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No auth token found');
+        setIncomingRequests([]);
+        setLoading(false);
+        return;
+      }
+      
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Fetch pending intake requests using lab-specific endpoint
+      const url = `${apiBase}/api/delivery/barrels/intake/lab-pending?status=pending`;
+      console.log('Fetching incoming requests from:', url);
+      
+      const res = await fetch(url, { headers });
+      console.log('Response status:', res.status, res.statusText);
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('API Error:', res.status, res.statusText, errorText);
+        throw new Error(`Failed to fetch incoming requests: ${res.status} ${res.statusText}`);
+      }
+      
+      const data = await res.json();
+      console.log('Raw API response:', data);
+      
+      // Handle both paginated and non-paginated responses
+      const items = data.items || data;
+      console.log('Items extracted:', items);
+      
+      const pendingItems = Array.isArray(items) 
+        ? items.filter(item => {
+            console.log('Checking item:', item._id, 'status:', item.status);
+            
+            // Check if this request has been checked in (from localStorage)
+            const completedCheckins = JSON.parse(localStorage.getItem('lab_checkins') || '[]');
+            const isCompleted = completedCheckins.some(checkin => 
+              checkin.sampleId === (item.requestId || item._id)
+            );
+            
+            if (isCompleted) {
+              console.log('Request already checked in:', item._id);
+              return false;
+            }
+            
+            return item.status === 'pending' || !item.status;
+          })
+        : [];
+      
+      console.log('Filtered pending items:', pendingItems.length, pendingItems);
+      setIncomingRequests(pendingItems);
+    } catch (error) {
+      console.error('Error fetching incoming requests:', error);
+      setIncomingRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Mock data for pending barrels from delivery staff
   const pendingBarrels = [
@@ -102,6 +186,12 @@ const LabDashboard = () => {
 
       <nav className="dashboard-nav">
         <button 
+          className={activeTab === 'incoming' ? 'active' : ''}
+          onClick={() => setActiveTab('incoming')}
+        >
+          📥 Incoming Requests ({incomingRequests.length})
+        </button>
+        <button 
           className={activeTab === 'pending' ? 'active' : ''}
           onClick={() => setActiveTab('pending')}
         >
@@ -122,6 +212,130 @@ const LabDashboard = () => {
       </nav>
 
       <main className="dashboard-content">
+        {activeTab === 'incoming' && (
+          <div className="incoming-requests-section">
+            <div className="section-header">
+              <h2>📥 Incoming Barrel Intake Requests</h2>
+              <div className="stats-summary">
+                <span className="stat-item">
+                  <strong>{incomingRequests.length}</strong> Requests from Delivery Staff
+                </span>
+              </div>
+            </div>
+            
+            {loading ? (
+              <div className="loading-state">
+                <i className="fas fa-spinner fa-spin"></i> Loading requests...
+              </div>
+            ) : incomingRequests.length === 0 ? (
+              <div className="no-data">
+                <div className="no-data-icon">📦</div>
+                <p>No incoming barrel intake requests</p>
+              </div>
+            ) : (
+              <div className="data-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Customer Name</th>
+                      <th>Phone</th>
+                      <th>Barrel Count</th>
+                      <th>Request ID</th>
+                      <th>Arrival Time</th>
+                      <th>Submitted At</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incomingRequests.map((request) => {
+                      // Build Sample Check-In URL with parameters
+                      const sampleId = request.requestId || request._id;
+                      const checkInUrl = `/lab/check-in?sampleId=${encodeURIComponent(sampleId)}&customerName=${encodeURIComponent(request.name || '')}&barrelCount=${request.barrelCount || 0}`;
+
+                      return (
+                        <tr 
+                          key={request._id}
+                          onClick={() => navigate(checkInUrl)}
+                          style={{ 
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          title="Click to start sample check-in"
+                        >
+                          <td><strong>{request.name || '-'}</strong></td>
+                        <td>
+                          {request.phone ? (
+                            <a 
+                              href={`tel:${request.phone}`}
+                              style={{ color: '#10b981', textDecoration: 'none' }}
+                            >
+                              <i className="fas fa-phone" style={{ marginRight: '4px' }}></i>
+                              {request.phone}
+                            </a>
+                          ) : '-'}
+                        </td>
+                        <td>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '4px 10px',
+                            backgroundColor: '#dbeafe',
+                            color: '#1e40af',
+                            borderRadius: '4px',
+                            fontWeight: '600'
+                          }}>
+                            {request.barrelCount || 0}
+                          </span>
+                        </td>
+                        <td>
+                          {request.requestId ? (
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '4px 10px',
+                              backgroundColor: '#f3e8ff',
+                              color: '#7c3aed',
+                              borderRadius: '4px',
+                              fontFamily: 'monospace',
+                              fontSize: '13px',
+                              fontWeight: '600'
+                            }}>
+                              {request.requestId}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td>
+                          {request.arrivalTime ? (
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '4px 10px',
+                              backgroundColor: '#fef3c7',
+                              color: '#92400e',
+                              borderRadius: '4px',
+                              fontSize: '13px',
+                              fontWeight: '500'
+                            }}>
+                              <i className="fas fa-clock" style={{ marginRight: '4px' }}></i>
+                              {new Date(request.arrivalTime).toLocaleString('en-IN')}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td>{new Date(request.createdAt).toLocaleString('en-IN')}</td>
+                        <td>
+                          <span className={`status ${request.status || 'pending'}`}>
+                            {(request.status || 'pending').toUpperCase()}
+                          </span>
+                        </td>
+                      </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'pending' && (
           <div className="pending-tests-section">
             <div className="section-header">
@@ -202,6 +416,9 @@ const LabDashboard = () => {
                     <tr key={test.barrelId}>
                       <td><strong>{test.barrelId}</strong></td>
                       <td>{test.userName}</td>
+
+
+
                       <td>{test.testDate}</td>
                       <td>
                         <span className="drc-value">{test.drcValue}%</span>

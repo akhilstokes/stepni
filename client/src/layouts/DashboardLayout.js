@@ -18,8 +18,10 @@ const DashboardLayout = ({ children }) => {
     if (path === '/user') return 'Dashboard';
     if (path.startsWith('/user/profile')) return 'Profile';
     if (path.startsWith('/user/live-rate')) return 'Live Rate';
-    if (path.startsWith('/user/transactions')) return 'Transactions';
+    if (path.startsWith('/user/transactions')) return 'Bills';
     if (path.startsWith('/user/requests')) return 'Requests';
+    if (path.startsWith('/user/my-barrels')) return 'My Barrels';
+    if (path.startsWith('/user/sell-barrels')) return 'Sell Barrels';
     if (path.startsWith('/user/notifications')) return 'Notifications';
     if (path.startsWith('/user/my-actions')) return 'My Actions';
     return 'Dashboard';
@@ -63,28 +65,36 @@ const DashboardLayout = ({ children }) => {
 
   return (
     <div className="web-dashboard">
+      {/* Top Navigation Bar - Moved to very top */}
+      <div className="top-nav-bar">
+        <div className="topbar-left">
+          <button className="topbar-menu-btn" onClick={toggleSidebar} aria-label="Toggle sidebar">
+            <i className="fas fa-bars"></i>
+          </button>
+          <div className="topbar-brand">
+            <div className="topbar-brand-title">HFP Portal</div>
+            <div className="topbar-brand-sub">Customer Dashboard</div>
+          </div>
+          <div className="topbar-divider"></div>
+          <div className="topbar-page">{getPageTitle()}</div>
+        </div>
+        
+        <div className="header-actions">
+          <button className="notification-btn" onClick={() => navigate('/user/notifications')}>
+            <i className="fas fa-bell"></i>
+            {notificationCount > 0 && (
+              <div className="notification-badge">{notificationCount}</div>
+            )}
+          </button>
+          
+          <button className="profile-btn" onClick={() => navigate('/user/profile')}>
+            <i className="fas fa-user-circle"></i>
+          </button>
+        </div>
+      </div>
+
       {/* Web Sidebar */}
       <div className={`web-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
-        {/* Header */}
-        <div className="web-header">
-          <div className="header-content">
-            <div className="brand-info">
-              <div className="brand-icon">
-                <i className="fas fa-industry"></i>
-              </div>
-              <div className="brand-text">
-                <h3>HFP Portal</h3>
-                <span>Customer Dashboard</span>
-              </div>
-            </div>
-            <div className="header-controls">
-              <button className="sidebar-toggle" onClick={toggleSidebar}>
-                <i className={`fas ${sidebarCollapsed ? 'fa-chevron-right' : 'fa-chevron-left'}`}></i>
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Navigation Sections */}
         <div className="nav-sections">
           {/* Dashboard Section */}
@@ -98,24 +108,6 @@ const DashboardLayout = ({ children }) => {
                   </div>
                 </div>
                 <span className="nav-label">Overview</span>
-              </NavLink>
-              
-              <NavLink to="/user/my-actions" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <div className="nav-icon-wrapper">
-                  <div className="nav-icon">
-                    <i className="fas fa-tasks"></i>
-                  </div>
-                </div>
-                <span className="nav-label">My Actions</span>
-              </NavLink>
-
-              <NavLink to="/user/profile" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <div className="nav-icon-wrapper">
-                  <div className="nav-icon">
-                    <i className="fas fa-user"></i>
-                  </div>
-                </div>
-                <span className="nav-label">Profile</span>
               </NavLink>
 
               <NavLink to="/user/notifications" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
@@ -132,13 +124,13 @@ const DashboardLayout = ({ children }) => {
           <div className="nav-section">
             <h4 className="section-title">ACTIONS</h4>
             <div className="nav-items">
-              <NavLink to="/user/requests" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <NavLink to="/user/sell-barrels" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <div className="nav-icon-wrapper">
                   <div className="nav-icon">
                     <i className="fas fa-truck-loading"></i>
                   </div>
                 </div>
-                <span className="nav-label">Sell Barrel Request</span>
+                <span className="nav-label">Sell Barrels</span>
               </NavLink>
 
               <NavLink to="/user/requests" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
@@ -148,6 +140,15 @@ const DashboardLayout = ({ children }) => {
                   </div>
                 </div>
                 <span className="nav-label">Request Barrels</span>
+              </NavLink>
+
+              <NavLink to="/user/my-barrels" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                <div className="nav-icon-wrapper">
+                  <div className="nav-icon">
+                    <i className="fas fa-box"></i>
+                  </div>
+                </div>
+                <span className="nav-label">My Barrels</span>
               </NavLink>
 
               <NavLink to="/user/live-rate" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
@@ -162,10 +163,10 @@ const DashboardLayout = ({ children }) => {
               <NavLink to="/user/transactions" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <div className="nav-icon-wrapper">
                   <div className="nav-icon">
-                    <i className="fas fa-receipt"></i>
+                    <i className="fas fa-file-invoice-dollar"></i>
                   </div>
                 </div>
-                <span className="nav-label">View Transactions</span>
+                <span className="nav-label">Bills</span>
               </NavLink>
             </div>
           </div>
@@ -184,42 +185,6 @@ const DashboardLayout = ({ children }) => {
 
       {/* Main Content */}
       <div className="main-content">
-        {/* Top Navigation Bar */}
-        <div className="top-nav-bar">
-          <div className="topbar-left">
-            <button className="topbar-menu-btn" onClick={toggleSidebar} aria-label="Toggle sidebar">
-              <i className="fas fa-bars"></i>
-            </button>
-            <div className="topbar-brand">
-              <div className="topbar-brand-title">HFP Portal</div>
-              <div className="topbar-brand-sub">Customer Dashboard</div>
-            </div>
-            <div className="topbar-divider"></div>
-            <div className="topbar-page">{getPageTitle()}</div>
-          </div>
-          
-          <div className="header-actions">
-            <button className="notification-btn" onClick={() => navigate('/user/notifications')}>
-              <i className="fas fa-bell"></i>
-              {notificationCount > 0 && (
-                <div className="notification-badge">{notificationCount}</div>
-              )}
-            </button>
-            
-            <div className="profile-dropdown">
-              <button className="profile-btn" onClick={() => navigate('/user/profile')}>
-                <div className="profile-avatar">
-                  <span>{getInitials(user?.name)}</span>
-                </div>
-                <div className="profile-info">
-                  <div className="profile-name">{user?.name || 'User'}</div>
-                  <div className="profile-role">{user?.role || 'Customer'}</div>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-        
         {children}
       </div>
     </div>

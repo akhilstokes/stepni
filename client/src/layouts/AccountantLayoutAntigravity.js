@@ -54,8 +54,8 @@ const AccountantLayoutAntigravity = ({ children }) => {
     };
 
     const menuItems = [
-        { path: '/accountant/latex', label: 'Verify Latex Billing' },
         { path: '/accountant/wages', label: 'Auto Wages' },
+        { path: '/accountant/rates', label: 'Set Live Rate' },
         { path: '/accountant/expenses', label: 'Expenses' },
         { path: '/accountant/stock', label: 'Stock Monitor' },
         { path: '/accountant/attendance', label: 'Attendance' },
@@ -151,20 +151,14 @@ const AccountantLayoutAntigravity = ({ children }) => {
                                 <span className="notification-badge">3</span>
                             </button>
 
-                            {/* Profile Settings */}
+                            {/* Profile Icon */}
                             <button
-                                className="header-action-btn profile-btn"
-                                onClick={() => setIsEditProfileOpen(true)}
-                                title="Edit Profile"
+                                className="header-action-btn profile-icon-btn"
+                                onClick={() => navigate('/accountant/wages')}
+                                title="Dashboard"
                             >
                                 <FiUser />
                             </button>
-
-                            {/* User Info Display */}
-                            <div className="header-user-info">
-                                <span className="header-user-name">{user?.name || 'Jeffin'}</span>
-                                <span className="header-user-role">Accountant</span>
-                            </div>
                         </div>
                     </div>
                 </header>

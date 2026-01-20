@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect, adminOrManager, adminManagerAccountant } = require('../middleware/authMiddleware');
+const { protect, adminOrManager, adminManagerAccountant, labOrAdminMiddleware } = require('../middleware/authMiddleware');
 const ctrl = require('../controllers/deliveryController');
 const historyCtrl = require('../controllers/deliveryHistoryController');
 const { rateLimiter } = require('../middleware/enhancedAuth');
@@ -43,6 +43,7 @@ router.get('/shift-schedule', protect, ctrl.getDeliveryShiftSchedule);
 // Intake endpoints
 router.post('/barrels/intake', protect, ctrl.intakeBarrels); // delivery staff
 router.get('/barrels/intake', protect, adminManagerAccountant, adminRateLimiter, ctrl.listIntakes); // accountant/manager/admin
+router.get('/barrels/intake/lab-pending', protect, labOrAdminMiddleware, ctrl.listIntakes); // lab staff - pending intakes
 router.get('/barrels/intake/my', protect, ctrl.listMyIntakes); // current user
 router.put('/barrels/intake/:id/verify', protect, adminOrManager, ctrl.verifyIntake); // manager verify
 router.put('/barrels/intake/:id/approve', protect, adminManagerAccountant, ctrl.approveIntake);

@@ -193,7 +193,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 24px;
+    padding: 12px 16px;
 }
 
 .header-greeting h1 {
@@ -211,7 +211,7 @@
 /* Main Content */
 .main-content {
     flex: 1;
-    padding: 24px;
+    padding: 0;
     background: #f8fafc;
 }
 
@@ -228,4 +228,72 @@
     .main-wrapper {
         margin-left: 0;
     }
+}
+
+/* Header Actions - Icon Buttons */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-action-btn {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    font-size: 18px;
+    transition: all 0.2s ease;
+}
+
+.header-action-btn:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+    border-color: #cbd5e1;
+}
+
+.header-action-btn:active {
+    transform: scale(0.95);
+}
+
+.notification-btn {
+    position: relative;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    background: #ef4444;
+    border-radius: 999px;
+    border: 2px solid white;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.profile-icon-btn {
+    background: #fef3c7;
+    border-color: #fde68a;
+    color: #f59e0b;
+}
+
+.profile-icon-btn:hover {
+    background: #fde68a;
+    border-color: #fcd34d;
+    color: #d97706;
 }

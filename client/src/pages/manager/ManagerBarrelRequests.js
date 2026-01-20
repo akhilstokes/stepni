@@ -102,135 +102,310 @@ const ManagerBarrelRequests = () => {
   });
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Barrel Requests</h2>
-      <p style={{ color: '#64748b' }}>View and manage barrel requests from users</p>
+    <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto' }}>
+      {/* Header Section */}
+      <div style={{ marginBottom: '32px' }}>
+        <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#1e293b', marginBottom: '8px' }}>
+          Barrel Requests
+        </h2>
+        <p style={{ color: '#64748b', fontSize: '15px', margin: 0 }}>
+          View and manage barrel requests from users
+        </p>
+      </div>
 
-      {error && <div style={{ background: '#fee', color: '#c00', padding: 12, borderRadius: 8, marginBottom: 16 }}>{error}</div>}
-      {success && <div style={{ background: '#efe', color: '#070', padding: 12, borderRadius: 8, marginBottom: 16 }}>{success}</div>}
+      {/* Alerts */}
+      {error && (
+        <div style={{ 
+          background: '#fee2e2', 
+          color: '#991b1b', 
+          padding: '16px 20px', 
+          borderRadius: '8px', 
+          marginBottom: '24px',
+          border: '1px solid #fecaca',
+          fontSize: '14px'
+        }}>
+          {error}
+        </div>
+      )}
+      {success && (
+        <div style={{ 
+          background: '#d1fae5', 
+          color: '#065f46', 
+          padding: '16px 20px', 
+          borderRadius: '8px', 
+          marginBottom: '24px',
+          border: '1px solid #a7f3d0',
+          fontSize: '14px'
+        }}>
+          {success}
+        </div>
+      )}
 
-      <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+      {/* Filter Buttons */}
+      <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
         <button 
           className={filter === 'pending' ? 'btn' : 'btn-secondary'} 
           onClick={() => setFilter('pending')}
+          style={{
+            padding: '10px 20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            background: filter === 'pending' ? '#f59e0b' : '#f3f4f6',
+            color: filter === 'pending' ? 'white' : '#6b7280'
+          }}
         >
           Pending ({requests.filter(r => r.status?.toLowerCase() === 'pending').length})
         </button>
         <button 
           className={filter === 'approved' ? 'btn' : 'btn-secondary'} 
           onClick={() => setFilter('approved')}
+          style={{
+            padding: '10px 20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            background: filter === 'approved' ? '#10b981' : '#f3f4f6',
+            color: filter === 'approved' ? 'white' : '#6b7280'
+          }}
         >
           Approved ({requests.filter(r => r.status?.toLowerCase() === 'approved').length})
         </button>
         <button 
           className={filter === 'rejected' ? 'btn' : 'btn-secondary'} 
           onClick={() => setFilter('rejected')}
+          style={{
+            padding: '10px 20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            background: filter === 'rejected' ? '#ef4444' : '#f3f4f6',
+            color: filter === 'rejected' ? 'white' : '#6b7280'
+          }}
         >
           Rejected ({requests.filter(r => r.status?.toLowerCase() === 'rejected').length})
         </button>
         <button 
           className={filter === 'all' ? 'btn' : 'btn-secondary'} 
           onClick={() => setFilter('all')}
+          style={{
+            padding: '10px 20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            borderRadius: '8px',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            background: filter === 'all' ? '#3b82f6' : '#f3f4f6',
+            color: filter === 'all' ? 'white' : '#6b7280'
+          }}
         >
           All ({requests.length})
         </button>
       </div>
 
+      {/* Content Area */}
       {loading ? (
-        <div>Loading...</div>
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '60px 20px', 
+          color: '#64748b',
+          fontSize: '16px'
+        }}>
+          Loading barrel requests...
+        </div>
       ) : filteredRequests.length === 0 ? (
-        <div style={{ textAlign: 'center', color: '#94a3b8', padding: 40 }}>
-          No {filter !== 'all' ? filter : ''} barrel requests found
+        <div style={{ 
+          textAlign: 'center', 
+          color: '#94a3b8', 
+          padding: '60px 20px',
+          background: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
+          <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
+            No {filter !== 'all' ? filter : ''} barrel requests found
+          </div>
+          <div style={{ fontSize: '14px', color: '#9ca3af' }}>
+            {filter === 'pending' ? 'All requests have been processed' : 'Check back later for new requests'}
+          </div>
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Quantity</th>
-                <th>Notes</th>
-                <th>Requested On</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRequests.map(r => (
-                <tr key={r._id}>
-                  <td>{r.user?.name || r.user?.email || 'Unknown User'}</td>
-                  <td style={{ fontWeight: 700, fontSize: 18 }}>{r.quantity || 1}</td>
-                  <td>{r.notes || '-'}</td>
-                  <td>{new Date(r.createdAt).toLocaleString()}</td>
-                  <td>
-                    <span 
-                      className={`badge status-${r.status?.toLowerCase() || 'pending'}`}
-                      style={{
-                        padding: '4px 12px',
-                        borderRadius: 12,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        backgroundColor: 
-                          r.status?.toLowerCase() === 'approved' ? '#d4edda' :
-                          r.status?.toLowerCase() === 'rejected' ? '#f8d7da' :
-                          '#fff3cd',
-                        color:
-                          r.status?.toLowerCase() === 'approved' ? '#155724' :
-                          r.status?.toLowerCase() === 'rejected' ? '#721c24' :
-                          '#856404'
-                      }}
-                    >
-                      {r.status || 'Pending'}
-                    </span>
-                  </td>
-                  <td>
-                    {r.status?.toLowerCase() === 'pending' && (
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button 
-                          className="btn" 
-                          style={{ background: '#28a745', color: 'white', padding: '6px 12px', fontSize: 13 }}
-                          onClick={() => approve(r._id)}
-                        >
-                          Approve
-                        </button>
-                        <button 
-                          className="btn-secondary" 
-                          style={{ background: '#dc3545', color: 'white', padding: '6px 12px', fontSize: 13 }}
-                          onClick={() => reject(r._id)}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    )}
-                    {r.status?.toLowerCase() === 'approved' && (
-                      requestedIds.includes(r._id) ? (
-                        <button 
-                          className="btn" 
-                          style={{ background: '#10b981', color: 'white', padding: '6px 12px', fontSize: 13, cursor: 'not-allowed' }}
-                          disabled
-                          title="Already requested from Admin"
-                        >
-                          ✓ Requested from Admin
-                        </button>
-                      ) : (
-                        <button 
-                          className="btn" 
-                          style={{ background: '#3b82f6', color: 'white', padding: '6px 12px', fontSize: 13 }}
-                          onClick={() => requestBarrelsFromAdmin(r._id, r.quantity, r.user?.name, r.user?.email)}
-                          title="Request Admin to create barrels"
-                        >
-                          📦 Request Barrels from Admin
-                        </button>
-                      )
-                    )}
-                    {r.status?.toLowerCase() === 'rejected' && (
-                      <span style={{ color: '#94a3b8' }}>-</span>
-                    )}
-                  </td>
+        <div style={{ 
+          background: 'white', 
+          borderRadius: '12px', 
+          border: '1px solid #e5e7eb',
+          overflow: 'hidden',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="table" style={{ width: '100%', borderCollapse: 'collapse', margin: 0 }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e5e7eb' }}>
+                  <th style={{ padding: '16px 20px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>User</th>
+                  <th style={{ padding: '16px 20px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quantity</th>
+                  <th style={{ padding: '16px 20px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Notes</th>
+                  <th style={{ padding: '16px 20px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Requested On</th>
+                  <th style={{ padding: '16px 20px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
+                  <th style={{ padding: '16px 20px', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredRequests.map(r => (
+                  <tr key={r._id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '20px', fontSize: '14px', color: '#1e293b', fontWeight: '500' }}>
+                      {r.user?.name || r.user?.email || 'Unknown User'}
+                    </td>
+                    <td style={{ padding: '20px' }}>
+                      <span style={{ 
+                        fontWeight: '700', 
+                        fontSize: '20px', 
+                        color: '#3b82f6',
+                        background: '#eff6ff',
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        display: 'inline-block'
+                      }}>
+                        {r.quantity || 1}
+                      </span>
+                    </td>
+                    <td style={{ padding: '20px', fontSize: '14px', color: '#64748b', maxWidth: '250px' }}>
+                      {r.notes || '-'}
+                    </td>
+                    <td style={{ padding: '20px', fontSize: '14px', color: '#64748b' }}>
+                      {new Date(r.createdAt).toLocaleDateString()}<br/>
+                      <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                        {new Date(r.createdAt).toLocaleTimeString()}
+                      </span>
+                    </td>
+                    <td style={{ padding: '20px' }}>
+                      <span 
+                        className={`badge status-${r.status?.toLowerCase() || 'pending'}`}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          display: 'inline-block',
+                          backgroundColor: 
+                            r.status?.toLowerCase() === 'approved' ? '#d1fae5' :
+                            r.status?.toLowerCase() === 'rejected' ? '#fee2e2' :
+                            '#fef3c7',
+                          color:
+                            r.status?.toLowerCase() === 'approved' ? '#065f46' :
+                            r.status?.toLowerCase() === 'rejected' ? '#991b1b' :
+                            '#92400e'
+                        }}
+                      >
+                        {r.status || 'Pending'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '20px' }}>
+                      {r.status?.toLowerCase() === 'pending' && (
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button 
+                            className="btn" 
+                            style={{ 
+                              background: '#10b981', 
+                              color: 'white', 
+                              padding: '8px 16px', 
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onClick={() => approve(r._id)}
+                            onMouseOver={(e) => e.target.style.background = '#059669'}
+                            onMouseOut={(e) => e.target.style.background = '#10b981'}
+                          >
+                            ✓ Approve
+                          </button>
+                          <button 
+                            className="btn-secondary" 
+                            style={{ 
+                              background: '#ef4444', 
+                              color: 'white', 
+                              padding: '8px 16px', 
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onClick={() => reject(r._id)}
+                            onMouseOver={(e) => e.target.style.background = '#dc2626'}
+                            onMouseOut={(e) => e.target.style.background = '#ef4444'}
+                          >
+                            ✕ Reject
+                          </button>
+                        </div>
+                      )}
+                      {r.status?.toLowerCase() === 'approved' && (
+                        requestedIds.includes(r._id) ? (
+                          <button 
+                            className="btn" 
+                            style={{ 
+                              background: '#d1fae5', 
+                              color: '#065f46', 
+                              padding: '8px 16px', 
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              border: '1px solid #a7f3d0',
+                              borderRadius: '6px',
+                              cursor: 'not-allowed'
+                            }}
+                            disabled
+                            title="Already requested from Admin"
+                          >
+                            ✓ Requested from Admin
+                          </button>
+                        ) : (
+                          <button 
+                            className="btn" 
+                            style={{ 
+                              background: '#3b82f6', 
+                              color: 'white', 
+                              padding: '8px 16px', 
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onClick={() => requestBarrelsFromAdmin(r._id, r.quantity, r.user?.name, r.user?.email)}
+                            title="Request Admin to create barrels"
+                            onMouseOver={(e) => e.target.style.background = '#2563eb'}
+                            onMouseOut={(e) => e.target.style.background = '#3b82f6'}
+                          >
+                            📦 Request Barrels from Admin
+                          </button>
+                        )
+                      )}
+                      {r.status?.toLowerCase() === 'rejected' && (
+                        <span style={{ color: '#9ca3af', fontSize: '14px' }}>No actions available</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

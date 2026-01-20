@@ -98,8 +98,7 @@ const ManagerDashboardLayout = ({ children }) => {
     if (path.includes('/sell-requests')) return { title: 'Sell Requests', subtitle: 'Manage sell requests', icon: 'fa-handshake' };
     if (path.includes('/barrel-allocation')) return { title: 'Barrel Allocation', subtitle: 'Allocate barrels', icon: 'fa-boxes' };
     if (path.includes('/returned-barrels')) return { title: 'Returned Barrels', subtitle: 'Track returned barrels', icon: 'fa-undo' };
-    if (path.includes('/latex-billing')) return { title: 'Latex Billing', subtitle: 'Manage latex billing', icon: 'fa-file-invoice' };
-    if (path.includes('/rates')) return { title: 'Set Live Rate', subtitle: 'Update live rates', icon: 'fa-chart-line' };
+    if (path.includes('/bill-verification')) return { title: 'Bill Verification', subtitle: 'Verify pending bills', icon: 'fa-file-invoice-dollar' };
     if (path.includes('/wages')) return { title: 'Wages', subtitle: 'Manage staff wages', icon: 'fa-money-bill-wave' };
     if (path.includes('/staff-salary')) return { title: 'Staff Salary', subtitle: 'Handle staff salaries', icon: 'fa-coins' };
     if (path.includes('/stock')) return { title: 'Stock', subtitle: 'Inventory management', icon: 'fa-boxes' };
@@ -135,8 +134,7 @@ const ManagerDashboardLayout = ({ children }) => {
       section: 'Business & Finance',
       items: [
         { to: '/manager/sell-requests', icon: 'fa-handshake', label: 'Sell Requests' },
-        { to: '/manager/latex-billing', icon: 'fa-file-invoice', label: 'Latex Billing' },
-        { to: '/manager/rates', icon: 'fa-chart-line', label: 'Set Live Rate' },
+        { to: '/manager/bill-verification', icon: 'fa-file-invoice-dollar', label: 'Bill Verification' },
         { to: '/manager/wages', icon: 'fa-money-bill-wave', label: 'Wages' },
         { to: '/manager/staff-salary', icon: 'fa-coins', label: 'Staff Salary' },
       ]
@@ -253,99 +251,25 @@ const ManagerDashboardLayout = ({ children }) => {
 
           <div className="manager-header-right">
             {/* Notifications */}
-            <div className="manager-notification-wrapper" ref={notifRef}>
-              <button 
-                className="manager-notification-btn"
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
-              >
-                <i className="fas fa-bell"></i>
-                {unreadCount > 0 && (
-                  <div className="manager-notification-dot">{unreadCount > 99 ? '99+' : unreadCount}</div>
-                )}
-              </button>
-
-              {/* Notification Dropdown */}
-              {notificationsOpen && (
-                <div className="manager-notification-dropdown">
-                  <div className="manager-notification-header">
-                    <h3>Notifications</h3>
-                    {unreadCount > 0 && (
-                      <span className="manager-unread-badge">{unreadCount} new</span>
-                    )}
-                  </div>
-                  <div className="manager-notification-list">
-                    {recentNotifications.length === 0 ? (
-                      <div className="manager-no-notifications">
-                        <i className="fas fa-bell-slash"></i>
-                        <p>No notifications</p>
-                      </div>
-                    ) : (
-                      recentNotifications.map((notif) => (
-                        <div
-                          key={notif._id}
-                          className={`manager-notification-item ${!notif.read ? 'unread' : ''}`}
-                          onClick={() => {
-                            if (notif.link) navigate(notif.link);
-                            setNotificationsOpen(false);
-                          }}
-                        >
-                          <div className="manager-notification-content">
-                            <div className="manager-notification-title">{notif.title}</div>
-                            <div className="manager-notification-message">{notif.message}</div>
-                            <div className="manager-notification-time">
-                              {new Date(notif.createdAt).toLocaleString()}
-                            </div>
-                          </div>
-                          {!notif.read && <div className="manager-notification-indicator"></div>}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
+            <button 
+              className="manager-notification-btn"
+              onClick={() => navigate('/manager/notifications')}
+              aria-label="Notifications"
+            >
+              <i className="fas fa-bell"></i>
+              {unreadCount > 0 && (
+                <div className="manager-notification-dot">{unreadCount > 99 ? '99+' : unreadCount}</div>
               )}
-            </div>
+            </button>
 
-            {/* Profile Dropdown */}
-            <div className="manager-profile-dropdown" ref={menuRef}>
-              <button 
-                className="manager-profile-btn"
-                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              >
-                <div className="manager-profile-avatar">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : 'M'}
-                </div>
-                <div className="manager-profile-info">
-                  <div className="manager-profile-name">{user?.name || 'Manager'}</div>
-                  <div className="manager-profile-role">System Manager</div>
-                </div>
-                <i className={`fas fa-chevron-${profileMenuOpen ? 'up' : 'down'}`}></i>
-              </button>
-
-              {profileMenuOpen && (
-                <div className="manager-dropdown-menu">
-                  <NavLink 
-                    to="/manager/profile" 
-                    className="manager-dropdown-item"
-                    onClick={() => setProfileMenuOpen(false)}
-                  >
-                    <i className="fas fa-user"></i>
-                    View Profile
-                  </NavLink>
-                  <NavLink 
-                    to="/manager/settings" 
-                    className="manager-dropdown-item"
-                    onClick={() => setProfileMenuOpen(false)}
-                  >
-                    <i className="fas fa-cog"></i>
-                    Settings
-                  </NavLink>
-                  <div className="manager-dropdown-item" onClick={handleLogout}>
-                    <i className="fas fa-sign-out-alt"></i>
-                    Sign Out
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Profile Icon */}
+            <button
+              className="manager-profile-icon-btn"
+              onClick={() => navigate('/manager/home')}
+              aria-label="Dashboard"
+            >
+              <i className="fas fa-user-circle"></i>
+            </button>
           </div>
         </header>
 

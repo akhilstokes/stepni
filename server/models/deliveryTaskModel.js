@@ -5,6 +5,15 @@ const deliveryTaskSchema = new mongoose.Schema({
   customerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   pickupAddress: { type: String, required: true },
+  pickupLocation: {
+    type: {
+      type: String,
+      enum: ['Point']
+    },
+    coordinates: {
+      type: [Number]
+    }
+  },
   dropAddress: { type: String, required: true },
   scheduledAt: { type: Date, required: false },
   notes: { type: String, default: '' },
@@ -20,5 +29,8 @@ const deliveryTaskSchema = new mongoose.Schema({
     default: {}
   }
 }, { timestamps: true });
+
+// Add geospatial index for location-based queries
+deliveryTaskSchema.index({ pickupLocation: '2dsphere' });
 
 module.exports = mongoose.model('DeliveryTask', deliveryTaskSchema);

@@ -54,6 +54,7 @@ const AdminDashboardLayout = ({ children }) => {
     if (path.includes('/worker-schedule')) return { title: 'Worker Schedule', subtitle: 'Schedule management', icon: 'fa-calendar-alt' };
     if (path.includes('/worker-documents')) return { title: 'Worker Documents', subtitle: 'Document management', icon: 'fa-file-alt' };
     if (path.includes('/create-barrel')) return { title: 'Barrel', subtitle: 'Barrel management', icon: 'fa-drum' };
+    if (path.includes('/barrel-register')) return { title: 'Barrel Issue Register', subtitle: 'Transaction ledger and audit trail', icon: 'fa-book' };
     if (path.includes('/barrel-requests')) return { title: 'Barrel Requests', subtitle: 'Handle barrel requests', icon: 'fa-drum' };
     if (path.includes('/chem-requests')) return { title: 'Chemical Requests', subtitle: 'Chemical request management', icon: 'fa-flask' };
     if (path.includes('/rates')) return { title: 'Rates', subtitle: 'Rate management', icon: 'fa-chart-line' };
@@ -93,6 +94,7 @@ const AdminDashboardLayout = ({ children }) => {
       items: [
         { to: '/admin/create-barrel', icon: 'fa-drum', label: 'Barrel' },
         { to: '/admin/barrel-requests', icon: 'fa-drum', label: 'Barrel Requests' },
+        { to: '/admin/barrel-register', icon: 'fa-book', label: 'Issue Register' },
       ]
     },
     {
@@ -206,7 +208,14 @@ const AdminDashboardLayout = ({ children }) => {
 
           <div className="admin-header-right">
             {/* Notification Button */}
-            <button className="admin-notification-btn" onClick={() => navigate('/admin/notifications')}>
+            <button 
+              className="admin-notification-btn" 
+              onClick={() => {
+                // Admin notifications page doesn't exist yet - just show alert
+                alert('Admin notifications page coming soon!');
+              }}
+              title="Notifications"
+            >
               <i className="fas fa-bell"></i>
               {notificationCount > 0 && (
                 <div className="admin-notification-badge">{notificationCount}</div>

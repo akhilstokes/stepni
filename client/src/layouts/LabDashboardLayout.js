@@ -83,7 +83,6 @@ const LabDashboardLayout = ({ children }) => {
     { path: '/lab/leave', icon: 'fas fa-calendar-times', label: 'My Leave', category: 'personal' },
     { path: '/lab/shift-schedule', icon: 'fas fa-clock', label: 'Shift Schedule', category: 'schedule' },
     { path: '/lab/check-in', icon: 'fas fa-flask', label: 'Sample Check-In', category: 'lab' },
-    { path: '/lab/drc-update', icon: 'fas fa-vial', label: 'DRC Test', category: 'lab' },
     { path: '/lab/quality-classifier', icon: 'fas fa-robot', label: 'AI Quality Classifier', category: 'ai' },
     { path: '/lab/quality-comparison', icon: 'fas fa-balance-scale', label: 'Compare Algorithms', category: 'ai' },
     { path: '/lab/chem-requests', icon: 'fas fa-atom', label: 'Chemical Requests', category: 'lab' },
@@ -250,9 +249,13 @@ const LabDashboardLayout = ({ children }) => {
                           key={notif._id}
                           className={`lab-notification-item ${!notif.read ? 'lab-notification-item--unread' : ''}`}
                           onClick={() => {
-                            if (notif.link) navigate(notif.link);
+                            // Only navigate if link exists and is a valid lab route
+                            if (notif.link && notif.link.startsWith('/lab/')) {
+                              navigate(notif.link);
+                            }
                             setNotificationsOpen(false);
                           }}
+                          style={{ cursor: notif.link && notif.link.startsWith('/lab/') ? 'pointer' : 'default' }}
                         >
                           <div className="lab-notification-content">
                             <div className="lab-notification-title">{notif.title}</div>
@@ -269,12 +272,12 @@ const LabDashboardLayout = ({ children }) => {
                   <div className="lab-notification-footer">
                     <button
                       onClick={() => {
-                        navigate('/lab/notifications');
+                        // Close dropdown - don't navigate to non-existent route
                         setNotificationsOpen(false);
                       }}
                       className="lab-notification-view-all"
                     >
-                      View All Notifications
+                      Close
                     </button>
                   </div>
                 </div>

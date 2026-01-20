@@ -86,6 +86,7 @@ const DeliveryDashboardLayout = ({ children }) => {
     if (path.includes('/assigned-requests')) return { title: 'Assigned Requests', subtitle: 'Handle assigned delivery requests', icon: 'fa-list' };
     if (path.includes('/task-history')) return { title: 'Task History', subtitle: 'View completed tasks', icon: 'fa-history' };
     if (path.includes('/shift-schedule')) return { title: 'My Schedule', subtitle: 'View your work schedule', icon: 'fa-calendar' };
+    if (path.includes('/vehicle-info')) return { title: 'Vehicle Details', subtitle: 'Manage your vehicle information', icon: 'fa-car' };
     if (path.includes('/barrel-intake')) return { title: 'Barrel Intake', subtitle: 'Manage barrel intake process', icon: 'fa-box' };
     if (path.includes('/leave')) return { title: 'Leave Management', subtitle: 'Apply and manage leave', icon: 'fa-calendar-times' };
     if (path.includes('/salary')) return { title: 'My Salary', subtitle: 'View salary information', icon: 'fa-money-bill' };
@@ -103,13 +104,13 @@ const DeliveryDashboardLayout = ({ children }) => {
         { to: '/delivery', icon: 'fa-home', label: 'Dashboard' },
         { to: '/delivery/route-plan', icon: 'fa-map', label: 'Route Plan' },
         { to: '/delivery/tasks', icon: 'fa-tasks', label: 'My Tasks' },
+        { to: '/delivery/barrel-deliveries', icon: 'fa-truck', label: 'Barrel Deliveries' },
       ]
     },
     {
       section: 'Operations',
       items: [
         { to: '/delivery/assigned-requests', icon: 'fa-list', label: 'Assigned Requests' },
-        { to: '/delivery/barrel-intake', icon: 'fa-box', label: 'Barrel Intake' },
         { to: '/delivery/task-history', icon: 'fa-history', label: 'Task History' },
       ]
     },
@@ -117,6 +118,7 @@ const DeliveryDashboardLayout = ({ children }) => {
       section: 'Personal',
       items: [
         { to: '/delivery/shift-schedule', icon: 'fa-calendar', label: 'My Schedule' },
+        { to: '/delivery/vehicle-info', icon: 'fa-car', label: 'Vehicle Details' },
         { to: '/delivery/leave', icon: 'fa-calendar-times', label: 'Leave' },
         { to: '/delivery/salary', icon: 'fa-money-bill', label: 'My Salary' },
       ]
@@ -269,47 +271,15 @@ const DeliveryDashboardLayout = ({ children }) => {
               )}
             </button>
 
-            {/* Profile Dropdown */}
-            <div className="delivery-profile-dropdown" ref={menuRef}>
-              <button 
-                className="delivery-profile-btn"
-                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              >
-                <div className="delivery-profile-avatar">
-                  {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                </div>
-                <div className="delivery-profile-info">
-                  <div className="delivery-profile-name">{user?.name || 'User'}</div>
-                  <div className="delivery-profile-role">Delivery Staff</div>
-                </div>
-                <i className={`fas fa-chevron-${profileMenuOpen ? 'up' : 'down'}`}></i>
-              </button>
-
-              {profileMenuOpen && (
-                <div className="delivery-dropdown-menu">
-                  <NavLink 
-                    to="/delivery/profile" 
-                    className="delivery-dropdown-item"
-                    onClick={() => setProfileMenuOpen(false)}
-                  >
-                    <i className="fas fa-user"></i>
-                    View Profile
-                  </NavLink>
-                  <NavLink 
-                    to="/delivery/settings" 
-                    className="delivery-dropdown-item"
-                    onClick={() => setProfileMenuOpen(false)}
-                  >
-                    <i className="fas fa-cog"></i>
-                    Settings
-                  </NavLink>
-                  <div className="delivery-dropdown-item" onClick={handleLogout}>
-                    <i className="fas fa-sign-out-alt"></i>
-                    Sign Out
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Profile Icon */}
+            <button
+              className="delivery-profile-icon-btn"
+              onClick={() => navigate('/delivery/profile')}
+              aria-label="Profile"
+              type="button"
+            >
+              <i className="fas fa-user-circle"></i>
+            </button>
           </div>
         </header>
 

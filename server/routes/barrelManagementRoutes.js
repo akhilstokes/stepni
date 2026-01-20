@@ -4,9 +4,27 @@ const { protect } = require('../middleware/authMiddleware');
 const BarrelRequest = require('../models/barrelRequestModel');
 const SellRequest = require('../models/sellRequestModel');
 const User = require('../models/userModel');
+const Barrel = require('../models/barrelModel');
 
-// Helper function to generate unique IDs
-const generateId = (prefix) => `${prefix}${Date.now()}${Math.floor(Math.random() * 1000)}`;
+// Helper function to generate unique IDs with year-based sequential format
+const generateBarrelId = async () => {
+  const year = new Date().getFullYear();
+  
+  // Find the highest barrel number from existing barrels for current year
+  const latestBarrel = await Barrel.findOne({
+    barrelId: new RegExp(`^BRL-${year}-`)
+  }).sort({ barrelId: -1 });
+  
+  let nextNumber = 1;
+  if (latestBarrel) {
+    const match = latestBarrel.barrelId.match(/^BRL-\d{4}-(\d{3})$/);
+    if (match) {
+      nextNumber = parseInt(match[1]) + 1;
+    }
+  }
+  
+  return `BRL-${year}-${nextNumber.toString().padStart(3, '0')}`;
+};
 
 // BARREL REGISTRATION ROUTES
 // Register new barrels (Admin only)
@@ -18,11 +36,13 @@ router.post('/admin/register-barrels', protect, async (req, res) => {
 
     const { barrelType, capacity, material, color, quantity, location, notes } = req.body;
     
-    // Generate barrel records with user info
+    // Generate and save barrel records to database
     const barrels = [];
     for (let i = 0; i < parseInt(quantity); i++) {
-      const barrel = {
-        id: `BRL${Date.now()}${Math.floor(Math.random() * 1000)}`,
+      const barrelId = await generateBarrelId();
+      
+      const barrel = new Barrel({
+        barrelId,
         type: barrelType,
         capacity,
         material,
@@ -30,15 +50,28 @@ router.post('/admin/register-barrels', protect, async (req, res) => {
         location,
         notes,
         status: 'available',
-        registeredDate: new Date(),
         registeredBy: req.user.name || 'Admin',
-        registeredById: req.user._id
-      };
-      barrels.push(barrel);
+        registeredById: req.user._id,
+        registeredDate: new Date()
+      });
+      
+      await barrel.save();
+      
+      // Format for frontend
+      barrels.push({
+        id: barrel.barrelId,
+        type: barrel.type,
+        capacity: barrel.capacity,
+        material: barrel.material,
+        color: barrel.color,
+        location: barrel.location,
+        notes: barrel.notes,
+        status: barrel.status,
+        registeredDate: barrel.registeredDate,
+        registeredBy: barrel.registeredBy
+      });
     }
 
-    // In a real implementation, you'd save to a Barrel model
-    // For now, we'll return success with the generated data
     res.json({ 
       success: true, 
       message: `Successfully registered ${quantity} barrel(s) by ${req.user.name}`,
@@ -47,6 +80,7 @@ router.post('/admin/register-barrels', protect, async (req, res) => {
       registrationDate: new Date().toISOString()
     });
   } catch (error) {
+    console.error('Error registering barrels:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -58,13 +92,56 @@ router.get('/admin/registered-barrels', protect, async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    // In a real implementation, you'd fetch from Barrel model
-    // For now, return mock data
+    const { availableOnly } = req.query;
+
+    // Build query filter
+    const filter = {};
+    if (availableOnly === 'true') {
+      filter.status = 'available';
+    }
+
+    // Fetch barrels from database with optional filter
+    const barrels = await Barrel.find(filter)
+      .populate('assignedTo', 'name email')
+      .sort({ registeredDate: -1 });
+    
+    // Format for frontend
+    const formattedBarrels = barrels.map(barrel => ({
+      id: barrel.barrelId,
+      barrelId: barrel.barrelId,
+      type: barrel.type,
+      capacity: barrel.capacity,
+      material: barrel.material,
+      color: barrel.color,
+      location: barrel.location,
+      notes: barrel.notes,
+      status: barrel.status,
+      registeredDate: barrel.registeredDate,
+      registeredBy: barrel.registeredBy,
+      assignedTo: barrel.assignedTo ? {
+        id: barrel.assignedTo._id,
+        name: barrel.assignedTo.name,
+        email: barrel.assignedTo.email
+      } : null,
+      assignedDate: barrel.assignedDate,
+      isAvailable: barrel.status === 'available'
+    }));
+
+    // Count by status
+    const statusCounts = {
+      available: formattedBarrels.filter(b => b.status === 'available').length,
+      inUse: formattedBarrels.filter(b => b.status === 'in-use').length,
+      maintenance: formattedBarrels.filter(b => b.status === 'maintenance').length,
+      assigned: formattedBarrels.filter(b => b.status === 'assigned').length
+    };
+
     res.json({ 
-      barrels: [],
-      total: 0
+      barrels: formattedBarrels,
+      total: formattedBarrels.length,
+      statusCounts
     });
   } catch (error) {
+    console.error('Error fetching barrels:', error);
     res.status(500).json({ message: error.message });
   }
 });

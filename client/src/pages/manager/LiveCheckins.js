@@ -17,6 +17,8 @@ const LiveCheckins = () => {
 
   const fetchCheckins = async () => {
     try {
+
+      
       setLoading(true);
       const response = await fetch(`${API_BASE}/api/attendance/live-checkins`, {
         headers: {

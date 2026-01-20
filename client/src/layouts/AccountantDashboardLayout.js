@@ -35,8 +35,8 @@ const AccountantDashboardLayout = ({ children }) => {
         <div className="sidebar-header">Accountant</div>
         <ul className="sidebar-nav">
           <li className="nav-item"><NavLink to="/accountant">Dashboard</NavLink></li>
-          <li className="nav-item"><NavLink to="/accountant/latex">Verify Latex Billing</NavLink></li>
           <li className="nav-item"><NavLink to="/accountant/wages">Auto Wages</NavLink></li>
+          <li className="nav-item"><NavLink to="/accountant/rates">Set Live Rate</NavLink></li>
           <li className="nav-item"><NavLink to="/accountant/stock">Stock Monitor</NavLink></li>
           <li className="nav-item"><NavLink to="/accountant/my-attendance">My Attendance</NavLink></li>
           <li className="nav-item"><NavLink to="/accountant/mark-attendance">Mark Attendance</NavLink></li>
@@ -50,7 +50,7 @@ const AccountantDashboardLayout = ({ children }) => {
         <header className="dashboard-header" style={{ justifyContent: 'flex-end' }}>
           <div className="user-header-actions">
             {/* Notification Button */}
-            <button className="notification-btn" onClick={() => navigate('/accountant/notifications')}>
+            <button className="notification-btn" onClick={() => navigate('/accountant/alerts')}>
               <i className="fas fa-bell"></i>
               {notificationCount > 0 && (
                 <div className="notification-badge">{notificationCount}</div>

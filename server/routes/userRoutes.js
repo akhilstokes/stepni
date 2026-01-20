@@ -18,6 +18,53 @@ router.get('/', protect, listUsers);
 // Farmers list for field collection forms
 router.get('/farmers', protect, listFarmers);
 
+// Find user by phone number (for billing)
+router.get('/find-by-phone', protect, async (req, res) => {
+  try {
+    const { phone } = req.query;
+    
+    if (!phone) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Phone number is required' 
+      });
+    }
+    
+    // Clean phone number - remove all non-digits
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Try to find user with various phone formats
+    const user = await User.findOne({
+      $or: [
+        { phoneNumber: phone },
+        { phoneNumber: cleanPhone },
+        { phoneNumber: `+91${cleanPhone}` },
+        { phoneNumber: `91${cleanPhone}` },
+        { phoneNumber: `0${cleanPhone}` }
+      ]
+    }).select('_id name email phoneNumber role');
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found with this phone number' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      user,
+      userId: user._id
+    });
+  } catch (error) {
+    console.error('Error finding user by phone:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to find user' 
+    });
+  }
+});
+
 // Get all staff members (for manager schedule page)
 router.get('/all-staff', protect, async (req, res) => {
   try {

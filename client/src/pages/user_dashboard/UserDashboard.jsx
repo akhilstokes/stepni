@@ -10,10 +10,6 @@ const UserDashboard = () => {
           <h2>Customer Dashboard</h2>
           <p>Manage your profile, view rates, track transactions, and raise requests.</p>
         </div>
-        <div className="userdash-quick">
-          <NavLink className="btn btn-secondary" to="/user/profile">Profile</NavLink>
-          <NavLink className="btn" to="/user/my-actions">My Actions</NavLink>
-        </div>
       </div>
 
       <div className="userdash-stats">

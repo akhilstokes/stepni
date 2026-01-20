@@ -570,7 +570,7 @@ exports.handleTaskAction = async (req, res) => {
 // Barrel intake functions
 exports.intakeBarrels = async (req, res) => {
   try {
-    const { barrelCount, customerName, customerPhone, notes, barrelIds } = req.body;
+    const { barrelCount, customerName, customerPhone, notes, barrelIds, taskId, requestId, arrivalTime } = req.body;
     const staffId = req.user._id;
 
     if (!barrelCount || !customerName) {
@@ -583,9 +583,32 @@ exports.intakeBarrels = async (req, res) => {
       phone: customerPhone,
       barrelCount,
       notes,
-      barrelIds,
+      barrelIds: barrelIds || [], // Optional - barrel scanning moved to field staff
+      taskId,
+      requestId,
+      arrivalTime: arrivalTime || new Date(),
       status: 'pending'
     });
+
+    // Automatically update the task status to intake_completed if taskId is provided
+    if (taskId) {
+      try {
+        // Remove 'sr_' prefix if present
+        const actualTaskId = taskId.startsWith('sr_') ? taskId.substring(3) : taskId;
+        
+        // Update task status
+        await DeliveryTask.findByIdAndUpdate(actualTaskId, { 
+          status: 'intake_completed',
+          'meta.intakeId': intake._id,
+          'meta.intakeCompletedAt': new Date()
+        });
+        
+        console.log(`Task ${actualTaskId} marked as intake_completed`);
+      } catch (updateError) {
+        console.error('Error updating task status:', updateError);
+        // Don't fail the intake if task update fails
+      }
+    }
 
     return res.status(201).json(intake);
   } catch (e) {

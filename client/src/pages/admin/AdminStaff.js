@@ -3,7 +3,7 @@ import { inviteStaff, listStaff, resendInvite, setStaffActive, approveStaff, lis
 import jsPDF from 'jspdf';
 
 const AdminStaff = () => {
-  const [form, setForm] = useState({ email: '', phone: '', name: '', address: '', staffId: '', role: 'field' });
+  const [form, setForm] = useState({ email: '', phone: '', name: '', address: '', staffId: '', role: 'field', experience: '' });
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState([]);
   const [error, setError] = useState('');
@@ -90,6 +90,7 @@ const AdminStaff = () => {
       `Phone Number: ${row.phone || 'Not provided'}`,
       `Address: ${row.address || 'Not provided'}`,
       `Staff ID: ${row.staffId || 'Not assigned'}`,
+      
       `Role: ${(row.role || 'field_staff').replace('_', ' ').toUpperCase()}`,
     ];
     
@@ -290,6 +291,7 @@ const AdminStaff = () => {
         name: form.name.trim(),
         address: form.address.trim(),
         staffId: noSpaces((form.staffId || '').toUpperCase().trim()),
+        experience: form.experience ? parseInt(form.experience) : 0,
         role: (form.role === 'lab') ? 'lab_staff' 
             : (form.role === 'delivery') ? 'delivery_staff' 
             : (form.role === 'accountant') ? 'accountant' 
@@ -297,7 +299,7 @@ const AdminStaff = () => {
             : 'field_staff'
       });
       setSuccess('Invitation sent successfully.');
-      setForm({ email: '', phone: '', name: '', address: '', staffId: '', role: 'field' });
+      setForm({ email: '', phone: '', name: '', address: '', staffId: '', role: 'field', experience: '' });
       setShowConfirmation(false);
       await load();
     } catch (e) {
@@ -344,122 +346,6 @@ const AdminStaff = () => {
       
       {error && <div style={{ color: 'tomato', marginTop: 8 }}>{error}</div>}
       {success && <div style={{ color: 'limegreen', marginTop: 8 }}>{success}</div>}
-
-      <div className="dash-card" style={{ padding: 20, marginBottom: 20 }}>
-        <h3 style={{ margin: '0 0 16px 0', color: '#1e293b' }}>Staff Overview</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 }}>
-          <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#f8fafc', borderRadius: 8 }}>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 4 }}>Total Staff</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#1e293b' }}>{stats.total}</div>
-          </div>
-          <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#f0f9ff', borderRadius: 8 }}>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 4 }}>Field Staff</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#3b82f6' }}>{stats.field}</div>
-          </div>
-          <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#f0fdf4', borderRadius: 8 }}>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 4 }}>Lab Staff</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#16a34a' }}>{stats.lab}</div>
-          </div>
-          <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#fef3c7', borderRadius: 8 }}>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 4 }}>Delivery Staff</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#d97706' }}>{stats.delivery}</div>
-          </div>
-          <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#f0f9ff', borderRadius: 8 }}>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 4 }}>Accountant</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#3b82f6' }}>{stats.accountant}</div>
-          </div>
-          <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#fef3c7', borderRadius: 8 }}>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 4 }}>Manager</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#d97706' }}>{stats.manager}</div>
-          </div>
-          <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#f0fdf4', borderRadius: 8 }}>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 4 }}>Active</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#16a34a' }}>{stats.active}</div>
-          </div>
-          <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#fef2f2', borderRadius: 8 }}>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 4 }}>Pending</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#dc2626' }}>{stats.pending}</div>
-          </div>
-          <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#f0f9ff', borderRadius: 8 }}>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 4 }}>Approved</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#3b82f6' }}>{stats.approved}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="dash-card" style={{ padding: 20, marginBottom: 20 }}>
-        <h3 style={{ margin: '0 0 16px 0', color: '#1e293b' }}>Filter & Search Staff</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: '#374151' }}>
-              Search Staff
-            </label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, email, staff ID, or phone..."
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db' }}
-            />
-          </div>
-          
-          <div>
-            <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: '#374151' }}>
-              Filter by Role
-            </label>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db' }}
-            >
-              <option value="all">All Roles</option>
-              <option value="field">Field Staff</option>
-              <option value="lab">Lab Staff</option>
-              <option value="delivery">Delivery Staff</option>
-              <option value="accountant">Accountant</option>
-              <option value="manager">Manager</option>
-            </select>
-          </div>
-          
-          <div>
-            <label style={{ display: 'block', marginBottom: 6, fontWeight: 500, color: '#374151' }}>
-              Filter by Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db' }}
-            >
-              <option value="all">All Status</option>
-              <option value="sent">Pending Invite</option>
-              <option value="verified">Waiting Approval</option>
-              <option value="approved">Approved</option>
-              <option value="active">Active</option>
-              <option value="suspended">Deactivated</option>
-            </select>
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'end' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={showStaffIdOnly}
-                onChange={(e) => setShowStaffIdOnly(e.target.checked)}
-              />
-              <span style={{ fontSize: 14, color: '#374151' }}>Show Staff IDs Only</span>
-            </label>
-          </div>
-        </div>
-        
-        <div style={{ marginTop: 16, padding: 12, backgroundColor: '#f8fafc', borderRadius: 6 }}>
-          <div style={{ fontSize: 14, color: '#64748b' }}>
-            Showing {filteredStaff.length} of {rows.length} staff members
-            {searchTerm && ` matching "${searchTerm}"`}
-            {roleFilter !== 'all' && ` in ${roleFilter} role`}
-            {statusFilter !== 'all' && ` with ${statusFilter} status`}
-          </div>
-        </div>
-      </div>
 
       <div style={{ 
         marginTop: 24,
@@ -542,6 +428,30 @@ const AdminStaff = () => {
               <option value="manager">Manager</option>
             </select>
             {validationErrors.role && <div style={{ color: '#dc3545', fontSize: '12px', marginTop: '4px' }}>{validationErrors.role}</div>}
+          </div>
+          
+          <div>
+            <label>Experience (Years)</label><br />
+            <input 
+              type="number" 
+              value={form.experience}
+              onChange={(e)=>setForm({ ...form, experience: e.target.value })} 
+              placeholder="e.g., 5" 
+              min="0"
+              max="50"
+            />
+          </div>
+          
+          <div>
+            <label>Experience (Years)</label><br />
+            <input 
+              type="number" 
+              value={form.experience}
+              onChange={(e)=>setForm({ ...form, experience: e.target.value })} 
+              placeholder="e.g., 5" 
+              min="0"
+              max="50"
+            />
           </div>
           
           <div>
@@ -920,38 +830,6 @@ const AdminStaff = () => {
           )}
         </div>
       )}
-
-      <h3 style={{ marginTop: 28 }}>Staff Users</h3>
-      <div style={{ marginTop: 8, overflowX: 'auto' }}>
-        <table className="dashboard-table" style={{ minWidth: 700 }}>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {staffUsers.map(u => (
-              <tr key={u._id}>
-                <td>{u.name}</td>
-                <td>{u.email}</td>
-                <td>{u.status}</td>
-                <td>
-                  <div style={{ display:'flex', gap:8 }}>
-                    <button className="btn btn-sm btn-outline" onClick={()=>toggleActive(u._id, u.status === 'active')}>{u.status === 'active' ? 'Deactivate' : 'Activate'}</button>
-                    <button className="btn btn-sm btn-danger" onClick={async()=>{ if(!window.confirm('Delete this staff user?')) return; setError(''); setSuccess(''); try{ await deleteStaffUser(u._id); setSuccess('Deleted'); await load(); }catch(e){ setError(e?.response?.data?.message || e?.message || 'Delete failed'); } }}>Delete</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {staffUsers.length === 0 && (
-              <tr><td colSpan={4} style={{ textAlign:'center', color:'#9aa' }}>No staff users.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 };

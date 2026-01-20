@@ -476,6 +476,32 @@
   line-height: 1;
 }
 
+/* Profile Icon Button */
+.delivery-profile-icon-btn {
+  width: 40px;
+  height: 40px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 20px;
+  transition: all 0.2s ease;
+}
+
+.delivery-profile-icon-btn:hover {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.delivery-profile-icon-btn:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.55);
+  outline-offset: 2px;
+}
+
 /* Profile Dropdown */
 .delivery-profile-dropdown {
   position: relative;

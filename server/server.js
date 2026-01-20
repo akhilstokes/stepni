@@ -78,9 +78,14 @@ app.use('/api/rates', require('./routes/rateRoutes'));
 app.use('/api/daily-rates', require('./routes/dailyRateRoutes'));
 app.use('/api/user-rate-history', require('./routes/RateHistoryRoutes'));
 app.use('/api/latex', require('./routes/latexRoutes'));
+// Rubber Board rate auto-fetch
+app.use('/api/rubber-rate', require('./routes/rubberRateRoutes'));
 
 // Barrel Management System - New CRUD API
 app.use('/api/barrel-management', require('./routes/barrelManagementRoutes'));
+
+// Barrel Issue Register System - Transaction Ledger
+app.use('/api/barrel-register', require('./routes/barrelIssueRegisterRoutes'));
 
 // Enhanced routes with role-based access control
 app.use('/api', require('./routes/enhancedRoutes'));

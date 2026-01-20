@@ -25,29 +25,90 @@ const Section = ({ title, children }) => (
 );
 
 const AdminHome = () => {
+  const [pendingRequests, setPendingRequests] = React.useState(0);
+
+  // Fetch pending barrel requests
+  React.useEffect(() => {
+    const fetchPendingRequests = async () => {
+      try {
+        const response = await fetch('/api/customer/requests', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        const data = await response.json();
+        // Count pending barrel requests
+        const pending = data.filter(r => r.type === 'BARREL' && r.status === 'pending').length;
+        setPendingRequests(pending);
+      } catch (error) {
+        console.error('Error fetching requests:', error);
+      }
+    };
+    
+    fetchPendingRequests();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchPendingRequests, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div>
-
-      {/* Quick Action Button */}
-      <div style={{ marginBottom: 24, textAlign: 'right' }}>
-        <Link 
-          to="/admin/staff-management" 
-          className="btn btn-primary" 
-          style={{ 
-            backgroundColor: '#3b82f6', 
-            color: 'white', 
-            padding: '12px 24px', 
-            borderRadius: '8px', 
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontWeight: '600'
-          }}
-        >
-          <span>👥</span> Add Staff
-        </Link>
-      </div>
+      {/* Notification Banner for Pending Requests */}
+      {pendingRequests > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+          padding: '16px 20px',
+          borderRadius: '12px',
+          marginBottom: '24px',
+          boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          color: 'white'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px'
+            }}>
+              🔔
+            </div>
+            <div>
+              <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '4px' }}>
+                {pendingRequests} Pending Barrel {pendingRequests === 1 ? 'Request' : 'Requests'}
+              </div>
+              <div style={{ fontSize: '14px', opacity: 0.9 }}>
+                Users are waiting for barrel allocation approval
+              </div>
+            </div>
+          </div>
+          <Link 
+            to="/admin/barrel-requests"
+            style={{
+              background: 'white',
+              color: '#d97706',
+              padding: '10px 20px',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontWeight: 600,
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+            }}
+          >
+            <i className="fas fa-eye"></i>
+            View Requests
+          </Link>
+        </div>
+      )}
 
       {/* ADMIN CORE RESPONSIBILITIES */}
       <Section title="🏭 System Management">

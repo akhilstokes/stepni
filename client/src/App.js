@@ -28,8 +28,9 @@ import ManagerHangerSpace from "./pages/manager/ManagerHangerSpace";
 import ManagerStock from "./pages/manager/ManagerStock";
 import ManagerBarrelAllocation from "./pages/manager/ManagerBarrelAllocation";
 import ManagerReturnBarrels from "./pages/manager/ManagerReturnBarrels";
-import ApproveSellRequests from "./pages/manager/ApproveSellRequests";
+import ManagerSellRequests from "./pages/manager/ManagerSellRequests";
 import ManagerLatexBilling from "./pages/manager/ManagerLatexBilling";
+import ManagerBillVerification from "./pages/manager/ManagerBillVerification";
 import ManagerRateUpdate from "./pages/manager/ManagerRateUpdate";
 import ManagerWages from "./pages/manager/ManagerWages";
 import ManagerStaffSalary from "./pages/manager/ManagerStaffSalary";
@@ -98,7 +99,10 @@ import MyActions from "./pages/user_dashboard/MyActions";
 import Notifications from "./pages/user_dashboard/Notifications";
 import UserRequests from "./pages/user_dashboard/UserRequests";
 import UserTransactions from "./pages/user_dashboard/UserTransactions";
+import UserBills from "./pages/user_dashboard/UserBills";
 import UserTransactionDetail from "./pages/user_dashboard/UserTransactionDetail";
+import MyBarrels from "./pages/user_dashboard/MyBarrels";
+import SellBarrels from "./pages/user_dashboard/SellBarrels";
 
 // Staff Pages
 import StaffProtectedRoute from "./components/common/StaffProtectedRoute";
@@ -123,10 +127,12 @@ import DeliveryDashboardLayout from "./layouts/DeliveryDashboardLayout";
 import DeliveryDashboard from "./pages/delivery/DeliveryDashboard";
 import DeliveryRoutePlan from "./pages/delivery/DeliveryRoutePlan";
 import DeliveryTasks from "./pages/delivery/DeliveryTasks";
+import BarrelDeliveryTasks from "./pages/delivery/BarrelDeliveryTasks";
 import DeliveryAssignedSellRequests from "./pages/delivery/DeliveryAssignedSellRequests";
 import DeliveryBarrelIntake from "./pages/delivery/DeliveryBarrelIntake";
 import DeliveryTaskHistory from "./pages/delivery/DeliveryTaskHistory";
 import DeliveryShiftSchedule from "./pages/delivery/DeliveryShiftSchedule";
+import VehicleInfo from "./pages/delivery/VehicleInfo";
 import DeliveryLeave from "./pages/delivery/DeliveryLeave";
 import DeliverySalary from "./pages/delivery/DeliverySalary";
 
@@ -143,6 +149,7 @@ import HangerSpace from "./pages/admin/HangerSpace";
 import ChemicalStockHistory from "./pages/admin/ChemicalStockHistory";
 import AdminCreateBarrel from "./pages/admin/AdminCreateBarrel";
 import BarrelManagement from "./pages/admin/BarrelManagement";
+import BarrelIssueRegister from "./pages/admin/BarrelIssueRegister";
 import AdminExpenses from "./pages/admin/AdminExpenses";
 import AdminChemicalRequests from "./pages/admin/AdminChemicalRequests";
 import AdminRateVerification from "./pages/admin/AdminRateVerification";
@@ -265,11 +272,41 @@ function App() {
           }
         />
         <Route
+          path="/user/my-barrels"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <MyBarrels />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user/sell-barrels"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <SellBarrels />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/user/transactions"
           element={
             <ProtectedRoute>
               <DashboardLayout>
-                <UserTransactions />
+                <UserBills />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user/bills"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <UserBills />
               </DashboardLayout>
             </ProtectedRoute>
           }
@@ -648,17 +685,17 @@ function App() {
           element={
             <ManagerProtectedRoute>
               <ManagerDashboardLayout>
-                <ApproveSellRequests />
+                <ManagerSellRequests />
               </ManagerDashboardLayout>
             </ManagerProtectedRoute>
           }
         />
         <Route
-          path="/manager/latex-billing"
+          path="/manager/bill-verification"
           element={
             <ManagerProtectedRoute>
               <ManagerDashboardLayout>
-                <ManagerLatexBilling />
+                <ManagerBillVerification />
               </ManagerDashboardLayout>
             </ManagerProtectedRoute>
           }
@@ -796,6 +833,16 @@ function App() {
           }
         />
         <Route
+          path="/delivery/barrel-deliveries"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <BarrelDeliveryTasks />
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
+        <Route
           path="/delivery/assigned-requests"
           element={
             <DeliveryProtectedRoute>
@@ -831,6 +878,16 @@ function App() {
             <DeliveryProtectedRoute>
               <DeliveryDashboardLayout>
                 <DeliveryShiftSchedule />
+              </DeliveryDashboardLayout>
+            </DeliveryProtectedRoute>
+          }
+        />
+        <Route
+          path="/delivery/vehicle-info"
+          element={
+            <DeliveryProtectedRoute>
+              <DeliveryDashboardLayout>
+                <VehicleInfo />
               </DeliveryDashboardLayout>
             </DeliveryProtectedRoute>
           }
@@ -998,6 +1055,16 @@ function App() {
           }
         />
         <Route
+          path="/admin/barrel-register"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardLayout>
+                <BarrelIssueRegister />
+              </AdminDashboardLayout>
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/expenses"
           element={
             <AdminProtectedRoute>
@@ -1070,11 +1137,11 @@ function App() {
           }
         />
         <Route
-          path="/accountant/latex"
+          path="/accountant/rates"
           element={
             <AccountantProtectedRoute>
               <AccountantDashboardLayout>
-                <AccountantLatexVerify />
+                <ManagerRateUpdate />
               </AccountantDashboardLayout>
             </AccountantProtectedRoute>
           }

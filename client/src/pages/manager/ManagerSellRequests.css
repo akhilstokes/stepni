@@ -764,55 +764,60 @@
 }
 
 .action-btn-assign {
-  background: linear-gradient(135deg, #8b4513 0%, #654321 100%);
+  background: #3b82f6;
   color: white;
-  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.25);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }
 
 .action-btn-assign:hover:not(:disabled) {
+  background: #2563eb;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.35);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
 }
 
 .action-btn-verify {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: #8b5cf6;
   color: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 2px 4px rgba(139, 92, 246, 0.2);
 }
 
 .action-btn-verify:hover:not(:disabled) {
+  background: #7c3aed;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+  box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
 }
 
 .action-btn-approve {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: #10b981;
   color: white;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 
 .action-btn-approve:hover:not(:disabled) {
+  background: #059669;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
 }
 
 .action-btn-details {
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  background: #6b7280;
   color: white;
-  box-shadow: 0 2px 8px rgba(107, 114, 128, 0.25);
+  box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2);
 }
 
 .action-btn-details:hover {
+  background: #4b5563;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.35);
+  box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3);
 }
 
 .action-btn:disabled {
-  background: #e5e7eb;
-  color: #94a3b8;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
+  background: #e5e7eb !important;
+  color: #9ca3af !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
+  opacity: 0.6;
 }
 
 /* Modal Overlay */

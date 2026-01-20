@@ -15,6 +15,11 @@ const deliveryIntakeSchema = new mongoose.Schema({
   verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   verifiedAt: { type: Date },
   linkedBillId: { type: mongoose.Schema.Types.ObjectId },
+  // New fields for delivery workflow
+  barrelIds: [{ type: String }], // Array of barrel IDs (optional, handled by field staff)
+  taskId: { type: String }, // Reference to delivery task
+  requestId: { type: String }, // Reference to sell request from manager
+  arrivalTime: { type: Date }, // Time when barrels arrived
   // Optional geolocation for where the request was created
   location: {
     type: { type: String, enum: ['Point'], default: 'Point' },

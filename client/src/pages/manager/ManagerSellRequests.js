@@ -18,7 +18,7 @@ const ManagerSellRequests = () => {
   const [error, setError] = useState('');
   const [filters, setFilters] = useState({ status: 'PENDING' });
   const [typeSeg, setTypeSeg] = useState('ALL'); // ALL | BARRELS | EMPTY | PRODUCTION
-  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
+  const [viewMode, setViewMode] = useState('table'); // 'cards' | 'table' - default to table
   const [assignDeliveryId, setAssignDeliveryId] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState('');
@@ -63,7 +63,7 @@ const ManagerSellRequests = () => {
   };
 
   const statusOptions = useMemo(() => ([
-    'PENDING','REQUESTED','FIELD_ASSIGNED','COLLECTED','DELIVER_ASSIGNED','DELIVERED_TO_LAB','TESTED','ACCOUNT_CALCULATED','VERIFIED','INVOICED'
+    'PENDING','APPROVED','ASSIGNED','REQUESTED','FIELD_ASSIGNED','COLLECTED','DELIVER_ASSIGNED','DELIVERED_TO_LAB','TESTED','ACCOUNT_CALCULATED','VERIFIED','INVOICED'
   ]), []);
 
   const load = async (force = false) => {
@@ -307,48 +307,133 @@ const ManagerSellRequests = () => {
         }
       }
       
-      // Normalize pickup address to a string (backend expects strings)
-      const rawPickup = req.pickupAddress || req.address || req.capturedAddress || req.location;
-      const pickupAddress = typeof rawPickup === 'string'
-        ? rawPickup
-        : (rawPickup && typeof rawPickup === 'object' && (rawPickup.label || rawPickup.name || rawPickup.address))
-          ? (rawPickup.label || rawPickup.name || rawPickup.address)
-          : 'Customer pickup location';
+      // Extract location data (GPS coordinates)
+      const locationData = req.location || req.pickupLocation || req.gpsLocation;
+      
+      // Build pickup address from multiple sources
+      // Priority: notes (user's address) > user location > pickupAddress field > fallback
+      let pickupAddress = 'Customer pickup location';
+      
+      // First try to get address from notes field (where users enter their address)
+      if (req.notes && typeof req.notes === 'string' && req.notes.trim()) {
+        pickupAddress = req.notes.trim();
+      } 
+      // Then try user's location field
+      else if (req.user?.location && typeof req.user.location === 'string' && req.user.location.trim()) {
+        pickupAddress = req.user.location.trim();
+      }
+      // Then try farmerId location
+      else if (req.farmerId?.location && typeof req.farmerId.location === 'string' && req.farmerId.location.trim()) {
+        pickupAddress = req.farmerId.location.trim();
+      }
+      // Then try other address fields
+      else {
+        const rawPickup = req.pickupAddress || req.address || req.capturedAddress;
+        if (typeof rawPickup === 'string' && rawPickup.trim()) {
+          pickupAddress = rawPickup.trim();
+        } else if (rawPickup && typeof rawPickup === 'object' && (rawPickup.label || rawPickup.name || rawPickup.address)) {
+          pickupAddress = (rawPickup.label || rawPickup.name || rawPickup.address).trim();
+        }
+      }
 
-      // Then create a delivery task for the staff to see
+      // Build delivery task payload with location
+      const metaData = {};
+      if (req.barrelCount) metaData.barrelCount = req.barrelCount;
+      if (req._type === 'SELL' && req._id) metaData.sellRequestId = req._id;
+      if (req._type === 'SELL_BARRELS' && req._id) metaData.intakeId = req._id;
+      if (req.locationAccuracy) metaData.locationAccuracy = req.locationAccuracy;
+      
       const payload = {
         title: req._type ? `${req._type} Pickup` : 'Pickup Task',
-        customerUserId: req.createdBy || req.user?._id || req.userId || undefined,
         assignedTo: selectedStaff,
         pickupAddress,
         dropAddress: 'HFP Lab / Yard',
         scheduledAt: new Date().toISOString(),
-        notes: req._notes || undefined,
-        meta: {
-          barrelCount: req.barrelCount ?? undefined,
-          sellRequestId: req._type === 'SELL' ? req._id : undefined,
-          intakeId: req._type === 'SELL_BARRELS' ? req._id : undefined
-        }
+        meta: metaData
       };
       
+      // Add optional fields only if they exist
+      if (req.createdBy || req.user?._id || req.userId) {
+        payload.customerUserId = req.createdBy || req.user?._id || req.userId;
+      }
+      if (req._notes) {
+        payload.notes = req._notes;
+      }
+
+      // Add GPS location ONLY if we have valid coordinates
+      // Don't send pickupLocation at all if coordinates are missing
+      if (locationData && 
+          locationData.type === 'Point' && 
+          Array.isArray(locationData.coordinates) && 
+          locationData.coordinates.length === 2 &&
+          typeof locationData.coordinates[0] === 'number' &&
+          typeof locationData.coordinates[1] === 'number') {
+        payload.pickupLocation = {
+          type: 'Point',
+          coordinates: locationData.coordinates
+        };
+        console.log('Added GPS location:', payload.pickupLocation);
+      } else {
+        console.log('No valid GPS location data, skipping pickupLocation field');
+      }
+      
+      console.log('Creating delivery task with payload:', payload);
+      
       await createTask(payload);
+      
+      // Update the sell request/intake status to ASSIGNED in the database
+      if (req._type === 'SELL_BARRELS' && req._id) {
+        // Update delivery intake status
+        try {
+          await fetch(`${API}/api/delivery/barrels/intake/${req._id}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({ 
+              status: 'assigned',
+              assignedDeliveryStaffId: selectedStaff
+            })
+          });
+        } catch (updateError) {
+          console.error('Failed to update intake status (non-critical):', updateError);
+        }
+      }
+      
       setInfo('Assigned successfully');
       
-      // Optimistic status update in table
+      // Get the staff name for display
+      const assignedStaffObj = staffList.find(s => s._id === selectedStaff);
+      const assignedStaffName = assignedStaffObj?.name || assignedStaffObj?.email || 'Assigned';
+      
+      // Update table with assigned staff info
       setRows(prev => prev.map(r => (
-        r._id === assignDeliveryId ? { ...r, status: 'assigned', _statusUpper: 'ASSIGNED' } : r
+        r._id === assignDeliveryId ? { 
+          ...r, 
+          status: 'assigned', 
+          _statusUpper: 'ASSIGNED',
+          assignedDeliveryStaffId: { name: assignedStaffName },
+          assignedTo: { name: assignedStaffName }
+        } : r
       )));
       setAssignedRequests(prev => new Set([...prev, assignDeliveryId]));
       
     } catch (e) {
-      setError('Failed to assign delivery staff: ' + (e?.message || 'Unknown error'));
+      // Extract more detailed error information
+      const errorDetails = e?.response?.data?.details || e?.response?.data?.error || e?.message || 'Unknown error';
+      setError(`Failed to assign delivery staff: ${errorDetails}`);
       console.error('Assignment error:', e);
+      console.error('Error response:', e?.response?.data);
+      
+      // Remove from assigned set since it failed
+      setAssignedRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(assignDeliveryId);
+        return newSet;
+      });
     }
     
     setShowAssignModal(false);
     setSelectedStaff('');
     setAssignDeliveryId(null);
-    setError('');
   };
 
 
@@ -386,7 +471,7 @@ const ManagerSellRequests = () => {
   const approve = async (id) => {
     // Disable button after clicking
     setApprovedRequests(prev => new Set([...prev, id]));
-    setInfo('Approved! ✅');
+    setInfo('Approved! ✅ Now you can assign delivery staff.');
     setError('');
     try {
       const r = rows.find(x => x._id === id) || {};
@@ -399,8 +484,7 @@ const ManagerSellRequests = () => {
       // Reflect approved status immediately in the table
       setRows(prev => prev.map(x => x._id === id ? { ...x, status: 'approved', _statusUpper: 'APPROVED' } : x));
     } catch (_) { /* non-blocking */ }
-    // After approval, proceed to assign delivery
-    openAssignDelivery(id);
+    // Don't automatically open assign modal - user will click "Assign Staff" button
   };
 
   const saveCompanyBarrel = async (id, value) => {
@@ -781,7 +865,7 @@ const ManagerSellRequests = () => {
                   </div>
                   {r._notes && (
                     <div className="request-notes">
-                      <span className="notes-label">Notes</span>
+                      <span className="notes-label">Address</span>
                       <p className="notes-text">{r._notes}</p>
                     </div>
                   )}
@@ -810,14 +894,25 @@ const ManagerSellRequests = () => {
                       </>
                     )}
                     {r._type === 'SELL_BARRELS' && (
-                      <button
-                        onClick={() => approve(r._id)}
-                        disabled={approvedRequests.has(r._id)}
-                        className="action-btn action-btn-approve"
-                      >
-                        <i className="fas fa-thumbs-up" />
-                        {approvedRequests.has(r._id) ? 'Approved' : 'Approve'}
-                      </button>
+                      <>
+                        <button
+                          onClick={() => approve(r._id)}
+                          disabled={approvedRequests.has(r._id)}
+                          className="action-btn action-btn-approve"
+                        >
+                          <i className="fas fa-thumbs-up" />
+                          {approvedRequests.has(r._id) ? 'Approved' : 'Approve'}
+                        </button>
+                        <button
+                          onClick={() => openAssignDelivery(r._id)}
+                          disabled={assignedRequests.has(r._id) || (!approvedRequests.has(r._id) && r._statusUpper !== 'APPROVED')}
+                          className="action-btn action-btn-assign"
+                          title={(!approvedRequests.has(r._id) && r._statusUpper !== 'APPROVED') ? 'Approve first before assigning' : ''}
+                        >
+                          <i className="fas fa-truck" />
+                          {assignedRequests.has(r._id) ? 'Assigned' : 'Assign Staff'}
+                        </button>
+                      </>
                     )}
                     {r._type !== 'SELL' && r._type !== 'SELL_BARRELS' && (
                       <button
@@ -845,6 +940,8 @@ const ManagerSellRequests = () => {
                 <th>Type</th>
                 <th>Status</th>
                 <th>Details</th>
+                <th>Assigned To</th>
+                <th>Location</th>
                 <th>Date</th>
                 <th>Actions</th>
               </tr>
@@ -924,11 +1021,66 @@ const ManagerSellRequests = () => {
                         )}
                         {r._notes && (
                           <div className="detail-row">
-                            <i className="fas fa-sticky-note" />
+                            <i className="fas fa-map-pin" />
                             <span className="detail-value">{r._notes.length > 40 ? r._notes.substring(0, 40) + '...' : r._notes}</span>
                           </div>
                         )}
                         {!r._notes && !r.barrelCount && <span className="detail-value">-</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="cell-assigned-to">
+                        {r.assignedDeliveryStaffId?.name || r.assignedTo?.name || (assignedRequests.has(r._id) ? 'Assigned' : '-')}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="cell-location">
+                        {(() => {
+                          // Extract GPS coordinates if available
+                          const locationData = r.location || r.pickupLocation || r.gpsLocation;
+                          const hasLocation = locationData && locationData.type === 'Point' && Array.isArray(locationData.coordinates) && locationData.coordinates.length === 2;
+                          
+                          if (hasLocation) {
+                            const [lng, lat] = locationData.coordinates;
+                            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+                            const accuracy = r.locationAccuracy;
+                            
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <a 
+                                  href={mapsUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="location-link"
+                                  style={{ 
+                                    color: '#3b82f6', 
+                                    textDecoration: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    fontSize: '0.875rem'
+                                  }}
+                                >
+                                  <i className="fas fa-map-marker-alt"></i>
+                                  View Map
+                                </a>
+                                {accuracy && (
+                                  <small style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+                                    ±{Math.round(accuracy)}m
+                                  </small>
+                                )}
+                              </div>
+                            );
+                          } else if (r.capturedAddress) {
+                            return (
+                              <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                <i className="fas fa-map-pin"></i> {r.capturedAddress.substring(0, 30)}...
+                              </div>
+                            );
+                          } else {
+                            return <span style={{ color: '#9ca3af', fontSize: '0.875rem' }}>No location</span>;
+                          }
+                        })()}
                       </div>
                     </td>
                     <td>
@@ -957,14 +1109,25 @@ const ManagerSellRequests = () => {
                           </>
                         )}
                         {r._type === 'SELL_BARRELS' && (
-                          <button
-                            onClick={() => approve(r._id)}
-                            disabled={approvedRequests.has(r._id)}
-                            className="action-btn action-btn-approve"
-                          >
-                            <i className="fas fa-thumbs-up" />
-                            {approvedRequests.has(r._id) ? 'Approved' : 'Approve'}
-                          </button>
+                          <>
+                            <button
+                              onClick={() => approve(r._id)}
+                              disabled={approvedRequests.has(r._id)}
+                              className="action-btn action-btn-approve"
+                            >
+                              <i className="fas fa-thumbs-up" />
+                              {approvedRequests.has(r._id) ? 'Approved' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={() => openAssignDelivery(r._id)}
+                              disabled={assignedRequests.has(r._id) || (!approvedRequests.has(r._id) && r._statusUpper !== 'APPROVED')}
+                              className="action-btn action-btn-assign"
+                              title={(!approvedRequests.has(r._id) && r._statusUpper !== 'APPROVED') ? 'Approve first before assigning' : ''}
+                            >
+                              <i className="fas fa-truck" />
+                              {assignedRequests.has(r._id) ? 'Assigned' : 'Assign Staff'}
+                            </button>
+                          </>
                         )}
                         {r._type !== 'SELL' && r._type !== 'SELL_BARRELS' && (
                           <button

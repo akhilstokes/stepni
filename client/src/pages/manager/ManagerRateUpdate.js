@@ -12,6 +12,8 @@ const ManagerRateUpdate = () => {
     notes: ''
   });
   const [submittedRates, setSubmittedRates] = useState([]);
+  const [officialRate, setOfficialRate] = useState(null);
+  const [fetchingOfficial, setFetchingOfficial] = useState(false);
   const todayISO = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
@@ -19,7 +21,49 @@ const ManagerRateUpdate = () => {
     const today = new Date().toISOString().split('T')[0];
     setForm(prev => ({ ...prev, effectiveDate: today }));
     loadSubmittedRates();
+    fetchOfficialRate(); // Auto-fetch on load
   }, []);
+
+  const fetchOfficialRate = async (forceRefresh = false) => {
+    setFetchingOfficial(true);
+    console.log('🔍 Fetching official rate from Rubber Board...');
+    try {
+      const token = localStorage.getItem('token');
+      const url = forceRefresh 
+        ? 'http://localhost:5000/api/rubber-rate/latex?refresh=true'
+        : 'http://localhost:5000/api/rubber-rate/latex';
+      
+      console.log('📡 API URL:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      console.log('📥 Response status:', response.status);
+      const data = await response.json();
+      console.log('📊 Response data:', data);
+      
+      if (data.success) {
+        setOfficialRate(data.data);
+        // Auto-fill market rate field
+        setForm(prev => ({ ...prev, marketRate: data.data.rate.toString() }));
+        console.log('✅ Official rate set:', data.data.rate);
+        if (forceRefresh) {
+          setSuccess(`Official rate refreshed: ₹${data.data.rate}/100kg`);
+        }
+      } else {
+        console.error('❌ Failed to fetch official rate:', data.error);
+        setError('Could not fetch official rate from Rubber Board. You can still manually enter rates.');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching official rate:', error);
+      setError('Error connecting to rate service. You can still manually enter rates.');
+    } finally {
+      setFetchingOfficial(false);
+    }
+  };
 
   const loadSubmittedRates = async () => {
     try {
@@ -112,10 +156,57 @@ const ManagerRateUpdate = () => {
         </div>
       )}
 
+      {/* Official Rubber Board Rate Display */}
+      {fetchingOfficial && !officialRate && (
+        <div className="dash-card" style={{ marginBottom: 24, background: '#f0f9ff', border: '2px solid #0ea5e9', textAlign: 'center', padding: 24 }}>
+          <div style={{ fontSize: 18, color: '#0369a1' }}>
+            🔄 Fetching official rate from Rubber Board...
+          </div>
+        </div>
+      )}
+      
+      {officialRate && (
+        <div className="dash-card" style={{ marginBottom: 24, background: '#f0f9ff', border: '2px solid #0ea5e9' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h4 style={{ margin: 0, marginBottom: 8, color: '#0369a1' }}>
+                📊 Official Rubber Board Rate (Reference)
+              </h4>
+              <div style={{ fontSize: 28, fontWeight: 'bold', color: '#0c4a6e', marginBottom: 4 }}>
+                ₹{officialRate.rate.toLocaleString('en-IN')} / 100 KG
+              </div>
+              <div style={{ fontSize: 14, color: '#64748b' }}>
+                Date: {officialRate.date || 'N/A'} | Source: {officialRate.source}
+              </div>
+              {officialRate.cached && (
+                <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                  Cached ({Math.floor(officialRate.cacheAge / 60)} min ago)
+                </div>
+              )}
+            </div>
+            <button 
+              onClick={() => fetchOfficialRate(true)} 
+              disabled={fetchingOfficial}
+              style={{ 
+                padding: '8px 16px', 
+                background: '#0ea5e9', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: 4,
+                cursor: fetchingOfficial ? 'not-allowed' : 'pointer',
+                opacity: fetchingOfficial ? 0.6 : 1
+              }}
+            >
+              {fetchingOfficial ? '🔄 Refreshing...' : '🔄 Refresh from Rubber Board'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         {/* Submit New Rate Proposal */}
         <div className="dash-card">
-          <h4 style={{ marginTop: 0, marginBottom: 16 }}>Submit Rate Proposal</h4>
+          <h4 style={{ marginTop: 0, marginBottom: 16 }}>💼 Set Company Rate</h4>
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', marginBottom: 4, fontWeight: 'bold' }}>
@@ -161,9 +252,13 @@ const ManagerRateUpdate = () => {
                 required
                 step="0.01"
                 min="0"
-                placeholder="Enter Market rate (₹)"
-                style={{ width: '100%', padding: 8, border: '1px solid #d1d5db', borderRadius: 4 }}
+                placeholder="Auto-filled from Rubber Board"
+                style={{ width: '100%', padding: 8, border: '1px solid #d1d5db', borderRadius: 4, background: '#f9fafb' }}
+                readOnly
               />
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                ℹ️ Auto-filled from Rubber Board. Click refresh above to update.
+              </div>
             </div>
 
             <div style={{ marginBottom: 16 }}>
@@ -267,8 +362,9 @@ const ManagerRateUpdate = () => {
           <div>
             <h5>Important Notes:</h5>
             <ul style={{ paddingLeft: 20, lineHeight: 1.6 }}>
+              <li>Official rate is auto-fetched from Rubber Board daily</li>
+              <li>Set your company rate (can be same, higher, or lower)</li>
               <li>Rates are per 100 Kg of product</li>
-              <li>Both INR and USD rates are required</li>
               <li>Effective date cannot be in the past</li>
               <li>Admin has final approval authority</li>
             </ul>

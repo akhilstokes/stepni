@@ -6,18 +6,61 @@ import './DeliveryTheme.css';
 
 const DeliveryTasks = () => {
   const [tasks, setTasks] = useState([]);
-  const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setTasks(await listMyTasks({ status: filter || undefined })); } catch { setTasks([]); }
-    finally { setLoading(false); }
-  }, [filter]);
+    try {
+      // Load both delivery tasks and sell requests
+      const [deliveryTasks, sellRequests] = await Promise.all([
+        listMyTasks(),
+        loadAssignedSellRequests()
+      ]);
+      
+      // Combine and filter out completed tasks
+      const allTasks = [...deliveryTasks, ...sellRequests].filter(task => {
+        // Filter out tasks with intake_completed or delivered status
+        const status = (task.status || '').toLowerCase().replace(/_/g, '');
+        return status !== 'intakecompleted' && status !== 'deliveredtolab';
+      });
+      
+      setTasks(allTasks);
+    } catch { 
+      setTasks([]); 
+    }
+    finally { 
+      setLoading(false); 
+    }
+  }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-refresh when page becomes visible (user returns from barrel intake)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('Page became visible, refreshing tasks...');
+        load();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also refresh when window gains focus
+    const handleFocus = () => {
+      console.log('Window gained focus, refreshing tasks...');
+      load();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [load]);
 
   const statuses = ['pickup_scheduled','enroute_pickup','picked_up','enroute_drop','delivered','cancelled'];
 
@@ -25,6 +68,45 @@ const DeliveryTasks = () => {
   const authHeaders = () => {
     const token = localStorage.getItem('token');
     return token ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+  };
+
+  const loadAssignedSellRequests = async () => {
+    try {
+      const response = await fetch(`${API}/api/sell-requests/delivery/my-assigned`, {
+        headers: authHeaders()
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const assigned = Array.isArray(data?.records) ? data.records : (Array.isArray(data) ? data : []);
+        // Filter out completed intakes - check for DELIVERED_TO_LAB status
+        return assigned
+          .filter(r => {
+            const status = (r.status || '').toUpperCase();
+            // Exclude if already delivered to lab or intake completed
+            return status !== 'DELIVERED_TO_LAB' && status !== 'INTAKE_COMPLETED';
+          })
+          .map(r => ({
+            _id: `sr_${r._id}`,
+            title: r._type ? `${r._type} Pickup` : (r.barrelCount != null ? `Sell Request Pickup (${r.barrelCount})` : 'Sell Request Pickup'),
+            status: r.status || 'DELIVER_ASSIGNED',
+            scheduledAt: r.assignedAt || r.updatedAt || r.createdAt,
+            createdAt: r.createdAt,
+            customerUserId: r.farmerId,
+            customerName: r.farmerId?.name || r.farmerId?.email || 'Unknown Customer',
+            pickupAddress: r.notes || r.capturedAddress || r.farmerId?.location || 'Customer pickup location',
+            dropAddress: 'HFP Lab / Yard',
+            meta: {
+              barrelCount: r.barrelCount,
+              sellRequestId: r._id
+            },
+            isSellRequest: true
+          }));
+      }
+      return [];
+    } catch (error) {
+      console.error('Error loading assigned sell requests:', error);
+      return [];
+    }
   };
 
   const deliverToLab = async (task) => {
@@ -94,38 +176,20 @@ const DeliveryTasks = () => {
     navigate(checkInUrl);
   };
 
-  const setBarrelIds = async (task) => {
-    const existing = Array.isArray(task?.meta?.barrels) ? task.meta.barrels.join(',') : '';
-    const input = window.prompt('Enter Barrel IDs (comma separated):', existing);
-    if (input == null) return;
-    const ids = input
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean);
-    try {
-      await updateStatus(task._id, { meta: { barrels: ids } });
-      await load();
-    } catch (e) {
-      alert(e?.message || 'Failed to save barrel IDs');
-    }
-  };
+
 
   return (
     <div>
       <h2>My Tasks</h2>
-      <div style={{ display:'flex', gap:8, alignItems:'end', marginBottom: 12 }}>
-        <label>
-          Status
-          <select value={filter} onChange={e=>setFilter(e.target.value)}>
-            <option value="">All</option>
-            {statuses.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </label>
-        <button className="btn-secondary" onClick={load} disabled={loading}>{loading ? 'Loading...' : 'Refresh'}</button>
+      <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom: 16 }}>
+        <button className="btn-secondary" onClick={load} disabled={loading}>
+          <i className="fas fa-sync-alt" style={{ marginRight: '6px' }}></i>
+          {loading ? 'Loading...' : 'Refresh'}
+        </button>
       </div>
 
       {loading ? <p>Loading...</p> : tasks.length === 0 ? (
-        <div className="no-data">No tasks found{filter ? ` for status "${filter}"` : ''}.</div>
+        <div className="no-data">No tasks found.</div>
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -138,37 +202,102 @@ const DeliveryTasks = () => {
                 <th>Barrels</th>
                 <th>Pickup</th>
                 <th>Drop</th>
-                <th>Status</th>
-                <th>Update</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {tasks.map((t, i) => (
-                <tr key={t._id}>
+                <tr key={t._id} style={{ backgroundColor: t.isSellRequest ? '#f8f9fa' : 'inherit' }}>
                   <td>{i+1}</td>
                   <td>{t.scheduledAt ? new Date(t.scheduledAt).toLocaleString('en-IN') : '-'}</td>
-                  <td>{t.title}</td>
-                  <td>{t.customerUserId?.name || t.customerUserId?.email || '-'}</td>
+                  <td>
+                    {t.title}
+                    {t.isSellRequest && (
+                      <span style={{ 
+                        marginLeft: '8px', 
+                        padding: '2px 6px', 
+                        backgroundColor: '#e3f2fd', 
+                        color: '#1976d2', 
+                        borderRadius: '4px', 
+                        fontSize: '10px',
+                        fontWeight: 'bold'
+                      }}>
+                        SELL REQUEST
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    <div style={{ fontSize: '13px', fontWeight: '500', color: '#1e293b' }}>
+                      {t.customerUserId?.name || t.customerUserId?.email || t.customerName || '-'}
+                    </div>
+                    {t.customerUserId?.phoneNumber && (
+                      <a 
+                        href={`tel:${t.customerUserId.phoneNumber}`}
+                        style={{
+                          fontSize: '11px',
+                          color: '#10b981',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <i className="fas fa-phone"></i>
+                        {t.customerUserId.phoneNumber}
+                      </a>
+                    )}
+                  </td>
                   <td>{t?.meta?.barrelCount ?? '-'}</td>
                   <td>{t.pickupAddress}</td>
                   <td>{t.dropAddress}</td>
-                  <td>{t.status}</td>
-                  <td>
-                    <select value={t.status} onChange={async (e)=>{
-                      try { await updateStatus(t._id, { status: e.target.value }); }
-                      catch (err) { alert(err?.message || 'Failed to update status. Follow allowed sequence.'); }
-                      load();
-                    }}>
-                      {statuses.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </td>
-                  <td style={{ display:'flex', gap:8 }}>
-                    {t.status !== 'delivered' && (
-                      <button className="btn-secondary" onClick={()=>deliverToLab(t)}>Delivered to Lab</button>
+                  <td style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                    <button 
+                      className="btn" 
+                      onClick={()=>{
+                        const customer = t?.customerUserId?.name || t?.customerUserId?.email || t?.customerName || 'Unknown Customer';
+                        const phone = t?.customerUserId?.phoneNumber || '';
+                        const count = t?.meta?.barrelCount || '1';
+                        const taskId = t?._id || '';
+                        const requestId = t?.meta?.sellRequestId || '';
+                        
+                        const qs = new URLSearchParams();
+                        qs.set('customerName', String(customer));
+                        qs.set('customerPhone', String(phone));
+                        qs.set('barrelCount', String(count));
+                        qs.set('taskId', String(taskId));
+                        if (requestId) qs.set('requestId', String(requestId));
+                        
+                        navigate(`/delivery/barrel-intake?${qs.toString()}`);
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <i className="fas fa-clipboard-check"></i>
+                      Barrel Intake
+                    </button>
+                    {!t.isSellRequest && (
+                      <button 
+                        className="btn-secondary" 
+                        onClick={()=>deliverToLab(t)}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '13px'
+                        }}
+                      >
+                        Delivered to Lab
+                      </button>
                     )}
-                    <button className="btn-secondary" onClick={()=>setBarrelIds(t)}>Set Barrel IDs</button>
-                    <button className="btn-secondary" onClick={()=>openLabCheckIn(t)}>Open Lab Check-In</button>
                   </td>
                 </tr>
               ))}

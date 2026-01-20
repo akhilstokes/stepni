@@ -107,7 +107,7 @@ const LoginPage = () => {
         }
         // Accountant users go to accountant module by default
         if (loggedInUser && loggedInUser.role === 'accountant') {
-            navigate('/accountant/latex', { replace: true });
+            navigate('/accountant', { replace: true });
             return;
         }
         if (returnTo) {
